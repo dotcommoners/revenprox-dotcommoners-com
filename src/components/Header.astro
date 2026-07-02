@@ -1,0 +1,16 @@
+---
+import { NAV, WWW } from '../data/site.js';
+---
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href={WWW} aria-label="dotcommoners home">
+      <span class="dot" aria-hidden="true"></span>
+      dotcommoners
+    </a>
+    <nav class="nav" aria-label="Primary">
+      {NAV.map((item) => (
+        <a href={item.href} class={item.label === 'Docs' ? 'hide-sm' : ''}>{item.label}</a>
+      ))}
+    </nav>
+  </div>
+</header>

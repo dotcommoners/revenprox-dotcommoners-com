@@ -1,0 +1,63 @@
+---
+import '../styles/global.css';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+const {
+  title,
+  description,
+  path = '',
+  keywords = [],
+  ogImage = 'og.png',
+  jsonLd = [],
+} = Astro.props;
+
+const site = Astro.site ?? new URL('https://www.dotcommoners.com');
+const base = import.meta.env.BASE_URL; // e.g. "/" or "/machineuse/"
+const joined = (base.replace(/\/$/, '') + '/' + path.replace(/^\//, '')).replace(/\/+/g, '/');
+const canonical = new URL(joined === '' ? base : joined, site).href.replace(/\/$/, '') || site.href;
+const ogUrl = new URL((base + ogImage).replace(/\/+/g, '/'), site).href;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {keywords.length > 0 && <meta name="keywords" content={keywords.join(', ')} />}
+    <link rel="canonical" href={canonical} />
+    <meta name="author" content="dotcommoners" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="theme-color" content="#0a0e14" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="dotcommoners" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogUrl} />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogUrl} />
+
+    <link rel="icon" href={(base + 'favicon.svg').replace(/\/+/g, '/')} type="image/svg+xml" />
+    <link rel="sitemap" href={(base + 'sitemap-index.xml').replace(/\/+/g, '/')} />
+
+    {jsonLd.map((schema) => (
+      <script type="application/ld+json" set:html={JSON.stringify(schema)} />
+    ))}
+  </head>
+  <body>
+    <Header />
+    <main>
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>

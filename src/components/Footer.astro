@@ -1,0 +1,32 @@
+---
+import { PROJECTS, CONTACT, GITHUB_ORG, DOCS, WWW } from '../data/site.js';
+const year = 2026;
+---
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="cols">
+      <div>
+        <a class="brand" href={WWW} style="margin-bottom:.8rem">
+          <span class="dot" aria-hidden="true"></span> dotcommoners
+        </a>
+        <p style="max-width:24rem; font-size:.92rem; margin:.4rem 0 0;">
+          Open-source infrastructure for the commons — high-performance, self-hostable systems software.
+        </p>
+      </div>
+      <div>
+        <h4>Projects</h4>
+        {PROJECTS.map((p) => <a href={p.site}>{p.name}</a>)}
+      </div>
+      <div>
+        <h4>Resources</h4>
+        <a href={DOCS}>Documentation</a>
+        <a href={GITHUB_ORG}>GitHub</a>
+        <a href={`mailto:${CONTACT}`}>{CONTACT}</a>
+      </div>
+    </div>
+    <p class="fine">
+      © {year} dotcommoners · Open source · Built for self-hosters and platform engineers ·
+      <a href={`mailto:${CONTACT}`}>{CONTACT}</a>
+    </p>
+  </div>
+</footer>

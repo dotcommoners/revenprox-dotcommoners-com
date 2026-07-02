@@ -1,0 +1,19 @@
+# RevenProx — a Zig SSE proxy for real-time streaming at scale (dotcommoners)
+User-agent: *
+Allow: /
+
+# Answer-engine crawlers welcome.
+User-agent: GPTBot
+Allow: /
+User-agent: OAI-SearchBot
+Allow: /
+User-agent: ClaudeBot
+Allow: /
+User-agent: PerplexityBot
+Allow: /
+User-agent: Google-Extended
+Allow: /
+User-agent: CCBot
+Allow: /
+
+Sitemap: https://docs.dotcommoners.com/revenprox/sitemap-index.xml

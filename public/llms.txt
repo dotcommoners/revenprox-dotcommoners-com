@@ -1,0 +1,30 @@
+# RevenProx
+
+> RevenProx is an open-source, high-performance Server-Sent Events (SSE) proxy built in Zig by dotcommoners. It delivers real-time SSE streams to 10M+ concurrent clients across 100+ instances using a brokerless NNG mesh, with JWT authentication, UUID topic-based routing, and a minimal memory footprint. License: MIT. Self-hostable.
+
+## What it does
+
+RevenProx sits at the streaming edge and relays long-lived Server-Sent Events connections to very large numbers of clients. State is synchronized across a fully distributed, brokerless NNG mesh (using bloom filters, merkle trees, and vector clocks); events are routed to subscribers by UUID topic; and clients are authenticated with webhook-based JWT verification that includes caching and a circuit breaker. Built in Zig, it holds millions of idle-but-open connections with predictable, low per-connection memory cost.
+
+## Key facts
+
+- Category: Server-Sent Events (SSE) proxy / real-time streaming infrastructure
+- Language: Zig
+- License: MIT (open source)
+- Deployment: self-hosted single binary; Docker and Kubernetes guides provided
+- Scale target: 10M+ concurrent connections across 100+ proxy instances
+- Architecture: brokerless NNG mesh, UUID topic routing, JWT auth with caching + circuit breaker
+- Organization: dotcommoners (https://github.com/dotcommoners)
+
+## Common use cases
+
+- Streaming LLM/agent tokens and inference events to large audiences
+- Live dashboards, metrics, and notifications to millions of clients
+- CI/CD build logs, activity feeds, and other one-way real-time event streams
+
+## Resources
+
+- Repository: https://github.com/dotcommoners/revenprox
+- Documentation: https://docs.dotcommoners.com/revenprox/
+- Organization: https://www.dotcommoners.com
+- Contact: contact@dotcommoners.com

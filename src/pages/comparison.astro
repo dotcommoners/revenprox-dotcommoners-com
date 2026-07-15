@@ -1,0 +1,132 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import { REPO, DOCS, url, breadcrumbSchema, orgSchema } from '../data/site.js';
+
+const title = 'RevenProx vs. DIY SSE & managed pub/sub — comparison';
+const description =
+  'RevenProx vs. rolling your own SSE and vs. managed pub/sub (Pusher, Ably, Redis) — an honest look at scale, cost, ownership, and operational burden.';
+const keywords = [
+  'RevenProx vs Pusher', 'RevenProx vs Ably', 'SSE vs Redis pub/sub', 'self-hosted pub/sub',
+  'brokerless vs broker', 'roll your own SSE', 'managed pub/sub alternative',
+];
+
+const crumbs = [
+  { label: 'RevenProx', path: '' },
+  { label: 'Comparison', path: 'comparison' },
+];
+
+const rows = [
+  ['Deployment model', 'Self-hosted single Zig binary; brokerless NNG mesh you own end to end.', 'Self-hosted, but you build and maintain the fan-out and state layer yourself.', 'Fully managed SaaS; you send messages and let them handle delivery.'],
+  ['Scaling to millions', 'Designed for 10M+ concurrent connections across 100+ instances; add nodes to the mesh.', 'Achievable, but you own the hard parts — connection handling, fan-out, cross-node state.', 'Handled for you, but throughput and connections are billed and quota-limited.'],
+  ['Central broker', 'None. Peer-to-peer mesh with no coordinator to bottleneck.', 'Usually a broker or shared store (e.g. Redis) that becomes the scaling ceiling.', 'A broker exists — it is just operated by the vendor, and priced accordingly.'],
+  ['Cost model', 'Cost of the servers you run. No per-message or per-connection fees.', 'Your engineering time plus the infrastructure you provision.', 'Per-message / per-connection / per-peak pricing that grows with your audience.'],
+  ['Per-connection memory', 'Low and predictable — Zig, no GC, tuned for idle-but-open streams.', 'Depends on your runtime; GC languages make millions of idle sockets expensive.', 'Not your concern (and not your control).'],
+  ['Auth', 'Webhook-based JWT verification with caching + circuit breaker, wired to your identity system.', 'Whatever you build.', 'Vendor auth model; typically token/keys with their own constraints.'],
+  ['Protocol', 'Server-Sent Events — a simple, one-way, HTTP-native streaming protocol.', 'Your choice (often WebSockets or SSE).', 'Often WebSockets and proprietary channels; SSE support varies.'],
+  ['Data ownership', 'Streams never leave your infrastructure.', 'Yours.', 'Traffic transits a third party.'],
+  ['License', 'Open source, MIT.', 'N/A (your code).', 'Proprietary.'],
+];
+---
+<BaseLayout
+  title={title}
+  description={description}
+  keywords={keywords}
+  path="comparison"
+  jsonLd={[breadcrumbSchema(crumbs), orgSchema]}
+>
+  <Breadcrumbs items={crumbs} />
+
+  <section class="hero" style="padding-top:2rem;">
+    <div class="wrap prose">
+      <span class="eyebrow">Comparison</span>
+      <h1>RevenProx vs. the alternatives</h1>
+      <div class="answer">
+        <span class="label">Summary</span>
+        <p>
+          <strong>Choose RevenProx when you want self-hosted, brokerless SSE fan-out at internet scale
+          without per-message fees.</strong> Rolling your own gives maximum control but makes you build and
+          operate the hard parts — connection handling, fan-out, and cross-node state. Managed pub/sub
+          (Pusher, Ably, Redis pub/sub, and similar) removes the operational burden but bills per
+          message/connection and moves your traffic through a third party. RevenProx aims to give you the
+          managed-service scale profile while keeping ownership, the data path, and the bill under your control.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:0;">
+    <div class="wrap">
+      <div class="table-scroll">
+        <table class="cmp">
+          <caption class="sr-only">Comparison of RevenProx, rolling your own SSE, and managed pub/sub services</caption>
+          <thead>
+            <tr>
+              <th scope="col">Dimension</th>
+              <th scope="col">RevenProx</th>
+              <th scope="col">Roll your own SSE</th>
+              <th scope="col">Managed pub/sub</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(([dim, rp, diy, mgd]) => (
+              <tr>
+                <th scope="row">{dim}</th>
+                <td>{rp}</td>
+                <td>{diy}</td>
+                <td>{mgd}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section style="background:var(--bg-soft); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
+    <div class="wrap prose">
+      <h2>vs. rolling your own SSE</h2>
+      <p>
+        Putting Server-Sent Events behind a generic reverse proxy and a shared store is a fine way to start.
+        It stops being fine at scale: you end up building targeted per-topic fan-out, cross-node state
+        synchronization, connection pooling for millions of long-lived streams, and an auth path that does
+        not fall over under reconnect storms — which is precisely the work RevenProx has already done
+        (brokerless mesh, bloom/merkle/vector-clock sync, UUID topic routing, cached JWT auth with a circuit
+        breaker). If you need this once, building it is a distraction; if this <em>is</em> your product, you
+        still have to operate it.
+      </p>
+
+      <h2>vs. managed pub/sub (Pusher, Ably, Redis pub/sub, …)</h2>
+      <p>
+        Managed services are excellent at removing operational burden, and for small-to-medium fan-out they
+        are often the right call. The tradeoffs show up at scale and around ownership: pricing is typically
+        per-message, per-connection, or per-peak, so cost grows with your audience; your traffic transits a
+        third party; and you inherit their protocol and quota model. Redis pub/sub in particular gives you a
+        broker to run and, being fire-and-forget through a central node, a scaling ceiling to plan around.
+        RevenProx trades "someone else runs it" for "you own it, brokerless, at a flat infrastructure cost."
+      </p>
+
+      <h2>Honest caveats</h2>
+      <ul>
+        <li><strong>You operate it.</strong> RevenProx is self-hosted infrastructure. If you would rather never run a mesh, a managed service is less work.</li>
+        <li><strong>SSE is one-way.</strong> If you need full-duplex, bidirectional messaging, SSE — and therefore RevenProx — is the wrong primitive; use WebSockets.</li>
+        <li><strong>It targets very large scale.</strong> The brokerless-mesh design earns its keep at high connection counts; a small app may not need it.</li>
+      </ul>
+      <p style="margin-top:1.6rem;">
+        <a class="btn btn-primary" href={DOCS}>Read the docs</a>
+        <a class="btn btn-ghost" href={REPO} style="margin-left:.6rem;">Source on GitHub →</a>
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head"><span class="eyebrow">Next</span><h2>Keep reading</h2></div>
+      <div class="next-links">
+        <a class="card" href={url('architecture')}><span class="k">Architecture</span><h3>How it works</h3><p>The NNG mesh, state sync, JWT auth, and memory model.</p></a>
+        <a class="card" href={url('use-cases')}><span class="k">Use cases</span><h3>Where this fits</h3><p>Token streaming, dashboards, notifications, market data.</p></a>
+        <a class="card" href={url('faq')}><span class="k">FAQ</span><h3>Common questions</h3><p>Scale, licensing, SSE vs WebSockets, self-hosting.</p></a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

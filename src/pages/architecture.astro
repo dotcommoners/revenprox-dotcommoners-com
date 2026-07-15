@@ -1,0 +1,170 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import {
+  REPO, DOCS, WWW, url, SITE,
+  breadcrumbSchema, orgSchema,
+} from '../data/site.js';
+
+const title = 'RevenProx Architecture — brokerless NNG mesh, JWT auth';
+const description =
+  'How RevenProx works: a brokerless NNG mesh with bloom/merkle/vector-clock state sync, UUID topic routing, webhook JWT auth, and a low-memory Zig model.';
+const keywords = [
+  'revenprox architecture', 'brokerless NNG mesh', 'SSE proxy architecture', 'bloom filters merkle trees vector clocks',
+  'JWT authentication circuit breaker', 'UUID topic routing', 'Zig SSE', 'distributed state synchronization',
+];
+
+const crumbs = [
+  { label: 'RevenProx', path: '' },
+  { label: 'Architecture', path: 'architecture' },
+];
+
+const techArticle = {
+  '@context': 'https://schema.org',
+  '@type': 'TechArticle',
+  headline: 'RevenProx Architecture: brokerless NNG mesh and JWT auth',
+  description,
+  about: 'RevenProx SSE proxy internal architecture',
+  author: { '@type': 'Organization', name: 'dotcommoners', url: WWW },
+  publisher: { '@type': 'Organization', name: 'dotcommoners', url: WWW },
+  url: `${SITE}/architecture`,
+  mainEntityOfPage: `${SITE}/architecture`,
+};
+---
+<BaseLayout
+  title={title}
+  description={description}
+  keywords={keywords}
+  path="architecture"
+  jsonLd={[techArticle, breadcrumbSchema(crumbs), orgSchema]}
+>
+  <Breadcrumbs items={crumbs} />
+
+  <section class="hero" style="padding-top:2rem;">
+    <div class="wrap prose">
+      <span class="eyebrow">Architecture</span>
+      <h1>How RevenProx works</h1>
+      <div class="answer">
+        <span class="label">Summary</span>
+        <p>
+          <strong>RevenProx holds long-lived SSE connections at the edge and synchronizes state across a
+          fully distributed, brokerless NNG mesh.</strong> Instances agree on which topics exist and where
+          subscribers live using bloom filters, merkle trees, and vector clocks; events are routed to
+          subscribers by UUID topic; and clients are authenticated with webhook-based JWT verification that
+          caches results and trips a circuit breaker to protect the auth upstream. Written in Zig, it holds
+          millions of idle-but-open connections at low, predictable per-connection memory.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:0;">
+    <div class="wrap prose">
+      <h2>The data path, end to end</h2>
+      <ol>
+        <li><strong>Connect.</strong> A client opens a long-lived SSE request (e.g. <code>GET /events/&lt;topic&gt;</code>) against any proxy instance and passes a JWT.</li>
+        <li><strong>Authenticate.</strong> The instance verifies the JWT via a webhook to your auth service, caching the result so repeat connects do not re-hit the upstream.</li>
+        <li><strong>Subscribe.</strong> The connection is registered against a UUID topic. Membership for that topic propagates across the mesh so every instance knows a subscriber exists.</li>
+        <li><strong>Publish.</strong> An event published to a topic — on any instance — is relayed across the NNG mesh to exactly the instances holding subscribers for that topic.</li>
+        <li><strong>Deliver.</strong> Each instance writes the event down its local matching SSE connections. No event travels to an instance that has no subscribers for the topic.</li>
+      </ol>
+
+      <h2>The brokerless NNG mesh</h2>
+      <p>
+        The defining decision in RevenProx is that there is <strong>no central message broker</strong>. A
+        broker is the classic scaling ceiling for pub/sub: every message and every subscription passes
+        through it, so it becomes the thing you must over-provision, license, and page someone about at 3am.
+        RevenProx removes it entirely. The proxy instances connect to one another directly over
+        <a href="https://nng.nanomsg.org/" rel="nofollow">NNG (nanomsg-next-gen)</a> to form a peer-to-peer
+        mesh. Any instance can accept a publish and get it to every subscriber across the fleet, so there is
+        no single coordinator to bottleneck — you add throughput by adding instances.
+      </p>
+
+      <h2>State synchronization: bloom + merkle + vector clocks</h2>
+      <p>
+        A brokerless mesh needs every instance to agree on distributed state — which topics exist and which
+        instances currently hold subscribers for them — without a central registry. RevenProx does this with
+        three complementary primitives:
+      </p>
+      <ul>
+        <li>
+          <strong>Bloom filters</strong> give each instance a compact, probabilistic summary of the topics it
+          holds subscribers for. Peers exchange these to cheaply answer "could you have subscribers for this
+          topic?" and skip forwarding events to instances that definitely do not — keeping fan-out targeted
+          instead of flooding the mesh.
+        </li>
+        <li>
+          <strong>Merkle trees</strong> let two instances compare their view of shared state by exchanging
+          hashes rather than the full state. Matching root hashes mean "we already agree"; a mismatch lets
+          them walk the tree to find exactly which branches diverged, so reconciliation transfers only the
+          diff.
+        </li>
+        <li>
+          <strong>Vector clocks</strong> order updates across instances without a global clock. When the same
+          topic's membership changes on different nodes, vector clocks establish causal ordering and detect
+          concurrent updates, so the mesh converges on a consistent view instead of races producing
+          contradictory state.
+        </li>
+      </ul>
+      <p>
+        Together these make state sync <em>gossip-friendly and bandwidth-cheap</em>: instances mostly confirm
+        they already agree, and only exchange real data when something has actually changed.
+      </p>
+
+      <h2>UUID topic-based routing</h2>
+      <p>
+        Every stream is a <strong>UUID topic</strong>. Clients subscribe to a topic; publishers publish to a
+        topic; the mesh routes by topic. Using UUIDs gives an effectively unlimited, collision-free topic
+        space — you can mint a topic per user, per session, per document, or per conversation without
+        coordination. Because routing is per-topic, an event only reaches the clients that subscribed to it:
+        targeted fan-out, not broadcast-to-everyone.
+      </p>
+
+      <h2>Authentication: webhook JWT + cache + circuit breaker</h2>
+      <p>
+        RevenProx authenticates connections with <strong>JWTs</strong>, but verification is
+        <strong>webhook-based</strong> — the proxy calls out to <em>your</em> auth service to validate a
+        token rather than embedding your auth logic. Two mechanisms keep that from becoming a liability at
+        scale:
+      </p>
+      <ul>
+        <li><strong>Caching.</strong> Verification results are cached, so a burst of reconnects for an already-seen token does not translate into a burst of calls to your auth service.</li>
+        <li><strong>Circuit breaker.</strong> If the auth upstream starts failing or slowing down, the circuit breaker trips and stops hammering it, protecting a degraded dependency from a thundering herd instead of amplifying the outage.</li>
+      </ul>
+
+      <h2>Memory model: why Zig</h2>
+      <p>
+        When you hold millions of connections that are mostly idle, cost is governed by
+        <strong>per-connection memory</strong>, not CPU. RevenProx is written in <strong>Zig</strong>: no
+        garbage collector, no heavyweight runtime, and manual, predictable memory layout. That keeps
+        per-connection overhead small and — just as importantly — <em>predictable</em>, so a node's capacity
+        is a number you can plan a fleet around rather than a GC-pause lottery. This is the property that
+        makes the 10M+ concurrent, 100+ instance target reachable.
+      </p>
+
+      <h2>Deployment shape</h2>
+      <p>
+        RevenProx builds to a <strong>single static binary</strong> with Zig and is
+        <strong>self-hosted</strong> on your own infrastructure — no managed control plane. Instances
+        discover one another and form the NNG mesh; you scale by running more of them. Docker and Kubernetes
+        deployment guides are provided in the documentation.
+      </p>
+
+      <p style="margin-top:2rem;">
+        <a class="btn btn-primary" href={DOCS}>Full documentation</a>
+        <a class="btn btn-ghost" href={REPO} style="margin-left:.6rem;">Source on GitHub →</a>
+      </p>
+    </div>
+  </section>
+
+  <section style="background:var(--bg-soft); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
+    <div class="wrap">
+      <div class="section-head"><span class="eyebrow">Next</span><h2>Keep reading</h2></div>
+      <div class="next-links">
+        <a class="card" href={url('use-cases')}><span class="k">Use cases</span><h3>Where this fits</h3><p>Token streaming, live dashboards, notifications, market data.</p></a>
+        <a class="card" href={url('comparison')}><span class="k">Comparison</span><h3>vs. the alternatives</h3><p>Rolling your own SSE vs. managed pub/sub vs. RevenProx.</p></a>
+        <a class="card" href={url('faq')}><span class="k">FAQ</span><h3>Common questions</h3><p>Scale, licensing, SSE vs WebSockets, self-hosting.</p></a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

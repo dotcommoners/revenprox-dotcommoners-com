@@ -1,0 +1,111 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import { REPO, DOCS, url, breadcrumbSchema, orgSchema } from '../data/site.js';
+
+const title = 'RevenProx Use Cases — SSE streaming at scale';
+const description =
+  'RevenProx use cases: streaming LLM tokens to millions, live dashboards, notifications, multiplayer, and market data — one-way SSE at scale, brokerless.';
+const keywords = [
+  'SSE use cases', 'LLM token streaming at scale', 'real-time dashboards SSE', 'live notifications proxy',
+  'market data streaming', 'multiplayer event streaming', 'server-sent events scale',
+];
+
+const crumbs = [
+  { label: 'RevenProx', path: '' },
+  { label: 'Use cases', path: 'use-cases' },
+];
+
+const cases = [
+  {
+    h: 'LLM token & agent event streaming',
+    p: 'Generative apps stream tokens as they are produced — a naturally one-way, long-lived stream per request. When a model or agent serves a large audience, you have millions of open streams at once. RevenProx uses a UUID topic per conversation or request, fans model output to the right client with no broker in the path, and holds the idle-between-tokens connections cheaply thanks to Zig’s low per-connection memory.',
+  },
+  {
+    h: 'Live dashboards & metrics',
+    p: 'Operational dashboards, analytics, and monitoring views want a continuous push of fresh numbers rather than polling. Publish metric updates to a topic and every open dashboard subscribed to it updates in real time. Targeted topic routing means a given dashboard only receives the streams it subscribed to, so you are not broadcasting every metric to every viewer.',
+  },
+  {
+    h: 'Real-time notifications & activity feeds',
+    p: 'In-app notifications, activity feeds, and presence updates are one-way pushes to potentially millions of connected users. Mint a topic per user or per channel and deliver events the moment they happen. Webhook-based JWT auth ties each subscription to your existing identity system so users only receive their own streams.',
+  },
+  {
+    h: 'Multiplayer & collaboration',
+    p: 'Collaborative editors, live cursors, and shared-session state broadcast a stream of changes to everyone in a room. A topic per room or document routes updates to exactly its participants. SSE is a clean fit for the server-to-client broadcast half of these apps, letting clients POST their own changes back over ordinary requests.',
+  },
+  {
+    h: 'Market data & price feeds',
+    p: 'Financial tickers, sports scores, betting odds, and other high-frequency feeds push updates to large numbers of watchers. Per-symbol or per-market UUID topics route each feed to just its subscribers, and a brokerless mesh means adding watchers is a matter of adding proxy instances rather than scaling a central bus.',
+  },
+  {
+    h: 'CI/CD logs & build output',
+    p: 'Streaming build logs, deploy progress, and job output to a browser is one-way, bursty, and long-lived. Relay the output stream over a topic so anyone watching a build sees lines as they are emitted, without polling an API or holding the connection open on your application servers.',
+  },
+];
+---
+<BaseLayout
+  title={title}
+  description={description}
+  keywords={keywords}
+  path="use-cases"
+  jsonLd={[breadcrumbSchema(crumbs), orgSchema]}
+>
+  <Breadcrumbs items={crumbs} />
+
+  <section class="hero" style="padding-top:2rem;">
+    <div class="wrap prose">
+      <span class="eyebrow">Use cases</span>
+      <h1>What people stream with RevenProx</h1>
+      <div class="answer">
+        <span class="label">Summary</span>
+        <p>
+          <strong>RevenProx fits any workload that pushes a one-way, real-time event stream to a very large
+          audience over Server-Sent Events</strong> — streaming LLM tokens to millions, live dashboards and
+          metrics, notifications and activity feeds, multiplayer and collaboration state, market-data feeds,
+          and CI/CD build logs. The common thread: many long-lived connections, targeted per-topic fan-out,
+          and no central broker to bottleneck.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:0;">
+    <div class="wrap">
+      <div class="grid grid-2">
+        {cases.map((c) => (<div class="card"><h3>{c.h}</h3><p>{c.p}</p></div>))}
+      </div>
+    </div>
+  </section>
+
+  <section style="background:var(--bg-soft); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
+    <div class="wrap prose">
+      <h2>When RevenProx is the right tool</h2>
+      <p>Reach for RevenProx when your workload looks like this:</p>
+      <ul>
+        <li><strong>The traffic is one-way</strong> — server to client. SSE (and RevenProx) is a fan-out channel, not a bidirectional RPC. Clients that need to send data back do so over ordinary HTTP requests.</li>
+        <li><strong>Connections are long-lived and numerous.</strong> Your cost is dominated by holding many mostly-idle streams open at once, not by request throughput.</li>
+        <li><strong>You want to own the data path.</strong> Self-hosting a brokerless mesh beats paying per message to a managed service, and keeps the stream inside your infrastructure.</li>
+        <li><strong>Delivery must be targeted.</strong> Different clients want different streams, and UUID topic routing gets each event to only its subscribers.</li>
+      </ul>
+      <p>
+        If instead you need full-duplex, low-latency, bidirectional messaging (e.g. a game netcode loop),
+        WebSockets are the better primitive — see the <a href={url('faq')}>FAQ on SSE vs WebSockets</a>.
+      </p>
+      <p style="margin-top:1.6rem;">
+        <a class="btn btn-primary" href={DOCS}>Read the docs</a>
+        <a class="btn btn-ghost" href={REPO} style="margin-left:.6rem;">Source on GitHub →</a>
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head"><span class="eyebrow">Next</span><h2>Keep reading</h2></div>
+      <div class="next-links">
+        <a class="card" href={url('architecture')}><span class="k">Architecture</span><h3>How it works</h3><p>The NNG mesh, state sync, JWT auth, and memory model.</p></a>
+        <a class="card" href={url('comparison')}><span class="k">Comparison</span><h3>vs. the alternatives</h3><p>Rolling your own vs. managed pub/sub vs. RevenProx.</p></a>
+        <a class="card" href={url('faq')}><span class="k">FAQ</span><h3>Common questions</h3><p>Scale, licensing, SSE vs WebSockets, self-hosting.</p></a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

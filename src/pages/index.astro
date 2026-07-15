@@ -1,10 +1,13 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { CONTACT, REPO, DOCS, WWW } from '../data/site.js';
+import {
+  CONTACT, REPO, DOCS, WWW, url,
+  softwareAppSchema, sourceCodeSchema, orgSchema, websiteSchema, faqSchema,
+} from '../data/site.js';
 
-const title = 'RevenProx — A Zig SSE proxy for real-time streaming at scale';
+const title = 'RevenProx — Zig SSE proxy for streaming to 10M+ clients';
 const description =
-  'RevenProx is an open-source, high-performance Server-Sent Events (SSE) proxy built in Zig. It delivers SSE streams to 10M+ concurrent clients across 100+ instances using a brokerless NNG mesh, with JWT authentication, topic-based routing, and a minimal memory footprint. Self-hostable and MIT-licensed.';
+  'Open-source Zig SSE proxy that streams Server-Sent Events to 10M+ concurrent clients across 100+ instances over a brokerless NNG mesh. Self-hostable, MIT.';
 const keywords = [
   'revenprox', 'SSE proxy', 'Server-Sent Events proxy', 'Zig proxy', 'real-time streaming proxy',
   'scalable SSE', 'millions of concurrent connections', 'brokerless', 'NNG mesh', 'JWT authentication',
@@ -12,64 +15,46 @@ const keywords = [
 ];
 
 const features = [
-  ['Massive scale', 'Designed for 10M+ concurrent SSE connections across 100+ proxy instances — real-time delivery that grows horizontally.'],
-  ['Brokerless architecture', 'No central message broker. State and messages flow across a fully distributed NNG mesh, so there is nothing to bottleneck or babysit.'],
-  ['Topic-based routing', 'UUID-based topics route events efficiently to exactly the clients that subscribed — no fan-out waste.'],
-  ['JWT authentication', 'Secure, webhook-based token verification with caching and a circuit breaker to protect upstreams under load.'],
-  ['Built in Zig', 'Maximum performance with a minimal, predictable memory footprint — no garbage collector, no heavyweight runtime.'],
-  ['Production-ready', 'Rate limiting, connection pooling, graceful shutdown, and first-class observability are built in.'],
+  ['Massive scale', 'Architected for 10M+ concurrent SSE connections across 100+ proxy instances. You add capacity by adding instances to the mesh — throughput grows horizontally rather than pushing a single node harder.'],
+  ['Brokerless mesh', 'No central message broker to bottleneck, license, or babysit. State and events flow peer-to-peer across a fully distributed NNG mesh, kept consistent with bloom filters, merkle trees, and vector clocks.'],
+  ['UUID topic routing', 'Events are routed to subscribers by UUID topic, so each client receives exactly the streams it subscribed to — targeted fan-out instead of broadcasting everything to everyone.'],
+  ['JWT authentication', 'Clients are authenticated with webhook-based JWT verification. Results are cached to avoid re-hitting your auth service on every connect, and a circuit breaker shields that upstream when it degrades.'],
+  ['Built in Zig', 'No garbage collector and no heavyweight runtime means predictable, low per-connection memory — the property that actually governs cost when you hold millions of idle-but-open streams.'],
+  ['Self-hostable, MIT', 'Builds to a single static binary with Zig and runs on your own infrastructure. Docker and Kubernetes deployment guides are provided. Fully open source under the MIT license.'],
 ];
 
 const faqs = [
-  ['What is RevenProx?', 'RevenProx is an open-source, high-performance Server-Sent Events (SSE) proxy written in Zig. It relays long-lived SSE streams to very large numbers of concurrent clients, using a brokerless NNG mesh for distributed state, topic-based routing for targeted delivery, and JWT authentication for security. It is MIT-licensed and self-hostable.'],
+  ['What is RevenProx?', 'RevenProx is an open-source, high-performance Server-Sent Events (SSE) proxy written in Zig by dotcommoners. It relays long-lived SSE streams to very large numbers of concurrent clients using a brokerless NNG mesh for distributed state, UUID topic-based routing for targeted delivery, and JWT authentication for security. It is MIT-licensed and self-hostable.'],
   ['How many connections can RevenProx handle?', 'RevenProx is architected for 10M+ concurrent connections spread across 100+ proxy instances. Because it is brokerless and horizontally scalable, you add capacity by adding instances to the NNG mesh rather than scaling a central broker.'],
   ['Why build an SSE proxy in Zig?', 'Zig gives RevenProx maximum throughput with a minimal, predictable memory footprint and no garbage collector — ideal for holding millions of idle-but-open streaming connections where per-connection overhead dominates cost.'],
-  ['How is it different from using Nginx or a generic reverse proxy for SSE?', 'RevenProx is purpose-built for SSE at scale rather than a general reverse proxy adapted to it. It adds distributed, brokerless state synchronization (bloom + merkle + vector clocks), UUID topic routing, per-topic fan-out, JWT verification with caching and a circuit breaker, and connection pooling tuned for millions of long-lived streams.'],
   ['Is RevenProx open source and self-hostable?', 'Yes. RevenProx is MIT-licensed and runs on your own infrastructure. It builds to a single binary with Zig and ships with Docker and Kubernetes deployment guides.'],
 ];
-
-const appSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'SoftwareApplication',
-  name: 'RevenProx',
-  applicationCategory: 'DeveloperApplication',
-  operatingSystem: 'Linux',
-  description,
-  url: DOCS,
-  codeRepository: REPO,
-  programmingLanguage: 'Zig',
-  license: 'https://opensource.org/licenses/MIT',
-  isAccessibleForFree: true,
-  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-  author: { '@type': 'Organization', name: 'dotcommoners', url: WWW },
-};
-const faqSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: faqs.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })),
-};
-const breadcrumb = {
-  '@context': 'https://schema.org',
-  '@type': 'BreadcrumbList',
-  itemListElement: [
-    { '@type': 'ListItem', position: 1, name: 'dotcommoners', item: WWW },
-    { '@type': 'ListItem', position: 2, name: 'RevenProx', item: DOCS },
-  ],
-};
 ---
-<BaseLayout title={title} description={description} keywords={keywords} path="" jsonLd={[appSchema, faqSchema, breadcrumb]}>
+<BaseLayout
+  title={title}
+  description={description}
+  keywords={keywords}
+  path=""
+  jsonLd={[softwareAppSchema, sourceCodeSchema, orgSchema, websiteSchema, faqSchema(faqs)]}
+>
   <section class="hero">
     <div class="wrap">
-      <span class="eyebrow">dotcommoners · Zig · MIT</span>
+      <span class="eyebrow">dotcommoners · Zig · MIT · SSE</span>
       <h1>SSE streaming to <span class="grad">millions</span>, brokerless.</h1>
       <p class="lede">
         RevenProx is a high-performance Server-Sent Events proxy built in Zig. It fans real-time
         event streams out to 10M+ concurrent clients across a distributed NNG mesh — with JWT auth,
-        topic-based routing, and a memory footprint small enough to make it affordable.
+        UUID topic routing, and a per-connection memory footprint small enough to make it affordable.
       </p>
       <div style="display:flex; gap:.9rem; flex-wrap:wrap; margin-top:2rem;">
         <a class="btn btn-primary" href={DOCS}>Read the docs</a>
         <a class="btn btn-ghost" href={REPO}>View on GitHub →</a>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="n"><span class="grad">10M+</span></div><div class="k">Concurrent SSE connections</div></div>
+        <div class="stat"><div class="n">100+</div><div class="k">Proxy instances in one mesh</div></div>
+        <div class="stat"><div class="n">0</div><div class="k">Central brokers to run</div></div>
+        <div class="stat"><div class="n">MIT</div><div class="k">Open source, self-hostable</div></div>
       </div>
     </div>
   </section>
@@ -77,6 +62,45 @@ const breadcrumb = {
   <hr class="hr" />
 
   <section>
+    <div class="wrap prose">
+      <div class="answer">
+        <span class="label">In one line</span>
+        <p><strong>RevenProx is an open-source Zig SSE proxy for streaming real-time Server-Sent Events to 10M+ concurrent clients across 100+ instances over a brokerless NNG mesh</strong> — with JWT authentication, UUID topic-based routing, and a minimal per-connection memory footprint. MIT-licensed and self-hostable.</p>
+      </div>
+      <h2>The problem: SSE at the scale of the whole internet</h2>
+      <p>
+        Server-Sent Events is the simplest way to push a one-way stream of updates from a server to a
+        browser: a long-lived HTTP response that stays open and emits events over time. It is ideal for
+        LLM token streams, live dashboards, notifications, and activity feeds. But the model has a hard
+        edge — each connection stays open for the client's entire session, so a popular application does not
+        have "requests per second," it has <em>millions of connections held open at once</em>.
+      </p>
+      <p>
+        At that scale the cost is not CPU; it is the memory and coordination overhead of every idle-but-open
+        socket, and the fan-out problem of routing the right event to the right subset of those millions of
+        clients. General-purpose reverse proxies and managed pub/sub services can be pressed into the role,
+        but they either bottleneck on a central broker or make you pay per-message for infrastructure you
+        could own. RevenProx is purpose-built for exactly this shape of workload.
+      </p>
+
+      <h2>The approach: brokerless mesh, minimal memory</h2>
+      <p>
+        RevenProx sits at the streaming edge and holds the long-lived SSE connections. Instead of routing
+        all events through a central broker, the proxy instances form a <strong>fully distributed,
+        brokerless NNG mesh</strong>. State — which topics exist and which instances hold subscribers for
+        them — is synchronized peer-to-peer using <strong>bloom filters, merkle trees, and vector
+        clocks</strong>, so any instance can accept a publish and get it to every subscriber, wherever they
+        are connected, with no single coordinator to overload.
+      </p>
+      <p>
+        Because it is written in <strong>Zig</strong> — no garbage collector, no heavyweight runtime —
+        per-connection memory is small and predictable, which is what actually determines how many idle
+        streams a node can hold. That combination is what lets a fleet reach the 10M+ concurrent target.
+      </p>
+    </div>
+  </section>
+
+  <section style="background:var(--bg-soft); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
     <div class="wrap">
       <div class="section-head">
         <span class="eyebrow">Capabilities</span>
@@ -86,10 +110,11 @@ const breadcrumb = {
       <div class="grid grid-2">
         {features.map(([h, p]) => (<div class="card"><h3>{h}</h3><p>{p}</p></div>))}
       </div>
+      <p style="margin-top:1.6rem;"><a href={url('architecture')}>See how the NNG mesh, state sync, and auth flow fit together →</a></p>
     </div>
   </section>
 
-  <section style="background:var(--bg-soft); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
+  <section>
     <div class="wrap">
       <div class="section-head">
         <span class="eyebrow">Quick start</span>
@@ -110,16 +135,37 @@ const breadcrumb = {
     </div>
   </section>
 
-  <section>
+  <section style="background:var(--bg-soft); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
     <div class="wrap">
       <div class="section-head">
         <span class="eyebrow">Use cases</span>
         <h2>Where RevenProx fits</h2>
+        <p>Any workload that pushes a one-way, real-time event stream to a very large audience.</p>
       </div>
       <div class="grid grid-3">
-        <div class="card"><h3>AI inference &amp; token streaming</h3><p>Stream LLM tokens and agent events to huge audiences without a broker bottleneck.</p></div>
+        <div class="card"><h3>AI &amp; token streaming</h3><p>Stream LLM tokens and agent/inference events to huge audiences without a broker bottleneck.</p></div>
         <div class="card"><h3>Live dashboards &amp; notifications</h3><p>Push metrics, alerts, and real-time updates to millions of open browser tabs.</p></div>
         <div class="card"><h3>Build logs &amp; live feeds</h3><p>Relay CI/CD output, activity feeds, and one-way event streams at the edge.</p></div>
+      </div>
+      <p style="margin-top:1.6rem;"><a href={url('use-cases')}>Explore detailed use cases →</a></p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Who it's for</span>
+        <h2>Built for platform &amp; infrastructure engineers</h2>
+        <p>
+          RevenProx is a piece of self-hosted infrastructure, not a SaaS. It is for teams that run their own
+          streaming edge — platform, infra, and real-time engineers who need SSE fan-out at internet scale,
+          want to own the data path, and would rather add nodes to a mesh than pay per message to a managed broker.
+        </p>
+      </div>
+      <div class="next-links">
+        <a class="card" href={url('architecture')}><span class="k">Architecture</span><h3>How it works</h3><p>The NNG mesh, state sync, JWT auth flow, and memory model.</p></a>
+        <a class="card" href={url('comparison')}><span class="k">Comparison</span><h3>vs. the alternatives</h3><p>RevenProx vs. rolling your own vs. managed pub/sub.</p></a>
+        <a class="card" href={url('faq')}><span class="k">FAQ</span><h3>Common questions</h3><p>Scale, licensing, SSE vs WebSockets, self-hosting, auth.</p></a>
       </div>
     </div>
   </section>
@@ -130,6 +176,7 @@ const breadcrumb = {
       <div class="faq" style="max-width:48rem;">
         {faqs.map(([q, a]) => (<details><summary>{q}</summary><p>{a}</p></details>))}
       </div>
+      <p style="margin-top:1.2rem;"><a href={url('faq')}>Read the full FAQ →</a></p>
     </div>
   </section>
 
@@ -139,6 +186,7 @@ const breadcrumb = {
       <p style="max-width:34rem; margin:0 auto 2rem;">Read the docs, browse the source, or reach out. Open source and self-hostable.</p>
       <div style="display:flex; gap:.9rem; justify-content:center; flex-wrap:wrap;">
         <a class="btn btn-primary" href={REPO}>github.com/dotcommoners/revenprox</a>
+        <a class="btn btn-ghost" href={url('contact')}>Contact us</a>
         <a class="btn btn-ghost" href={`mailto:${CONTACT}`}>{CONTACT}</a>
       </div>
     </div>

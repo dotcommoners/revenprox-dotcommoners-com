@@ -1,32 +1,38 @@
 ---
-import { PROJECTS, CONTACT, GITHUB_ORG, DOCS, WWW } from '../data/site.js';
+import { CONTACT, GITHUB_ORG, DOCS, WWW, REPO, url } from '../data/site.js';
 const year = 2026;
 ---
 <footer class="site-footer">
   <div class="wrap">
     <div class="cols">
       <div>
-        <a class="brand" href={WWW} style="margin-bottom:.8rem">
-          <span class="dot" aria-hidden="true"></span> dotcommoners
+        <a class="brand" href={url('')} style="margin-bottom:.8rem">
+          <span class="dot" aria-hidden="true"></span> RevenProx
         </a>
         <p style="max-width:24rem; font-size:.92rem; margin:.4rem 0 0;">
-          Open-source infrastructure for the commons — high-performance, self-hostable systems software.
+          An open-source, high-performance Server-Sent Events proxy built in Zig by
+          <a href={WWW}>dotcommoners</a> — real-time streaming to 10M+ concurrent clients, brokerless and self-hostable.
         </p>
       </div>
       <div>
-        <h4>Projects</h4>
-        {PROJECTS.map((p) => <a href={p.site}>{p.name}</a>)}
+        <h4>Product</h4>
+        <a href={url('')}>Overview</a>
+        <a href={url('architecture')}>Architecture</a>
+        <a href={url('use-cases')}>Use cases</a>
+        <a href={url('comparison')}>Comparison</a>
+        <a href={url('faq')}>FAQ</a>
       </div>
       <div>
         <h4>Resources</h4>
         <a href={DOCS}>Documentation</a>
-        <a href={GITHUB_ORG}>GitHub</a>
-        <a href={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/contact`}>Contact</a>
+        <a href={REPO}>GitHub repo</a>
+        <a href={GITHUB_ORG}>dotcommoners on GitHub</a>
+        <a href={url('contact')}>Contact</a>
         <a href={`mailto:${CONTACT}`}>{CONTACT}</a>
       </div>
     </div>
     <p class="fine">
-      © {year} dotcommoners · Open source · Built for self-hosters and platform engineers ·
+      © {year} dotcommoners · RevenProx is MIT-licensed and self-hostable · Built for platform &amp; infrastructure engineers ·
       <a href={`mailto:${CONTACT}`}>{CONTACT}</a>
     </p>
   </div>

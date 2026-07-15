@@ -1,0 +1,123 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import {
+  REPO, DOCS, url,
+  breadcrumbSchema, faqSchema, orgSchema, softwareAppSchema,
+} from '../data/site.js';
+
+const title = 'RevenProx FAQ — SSE proxy questions answered';
+const description =
+  'RevenProx FAQ: what it is, connection scale, open source, the brokerless NNG mesh, SSE vs WebSockets, self-hosting, and how authentication works.';
+const keywords = [
+  'RevenProx FAQ', 'what is RevenProx', 'brokerless NNG mesh explained', 'SSE vs WebSockets',
+  'self-host SSE proxy', 'JWT auth SSE', 'concurrent SSE connections',
+];
+
+const crumbs = [
+  { label: 'RevenProx', path: '' },
+  { label: 'FAQ', path: 'faq' },
+];
+
+const faqs = [
+  ['What is RevenProx?',
+    'RevenProx is an open-source, high-performance Server-Sent Events (SSE) proxy built in Zig by dotcommoners. It sits at the streaming edge and relays long-lived SSE connections to very large numbers of clients, using a brokerless NNG mesh for distributed state, UUID topic-based routing for targeted delivery, and JWT authentication. It is MIT-licensed and self-hostable.'],
+  ['How many concurrent connections can RevenProx handle?',
+    'RevenProx is architected for 10M+ concurrent connections spread across 100+ proxy instances. Because it is brokerless and horizontally scalable, you scale by adding instances to the NNG mesh rather than growing a central broker. Zig’s low, predictable per-connection memory is what makes holding millions of idle-but-open streams practical.'],
+  ['Is RevenProx open source?',
+    'Yes. RevenProx is released under the MIT license and the source is on GitHub at github.com/dotcommoners/revenprox. You can read, modify, self-host, and deploy it freely.'],
+  ['What is a brokerless NNG mesh?',
+    'It means the proxy instances talk to each other directly over NNG (nanomsg-next-gen) to form a peer-to-peer mesh, with no central message broker in the middle. State — which topics exist and where subscribers live — is kept consistent across the mesh using bloom filters, merkle trees, and vector clocks. Removing the broker removes the usual pub/sub scaling ceiling: any instance can accept a publish and route it to subscribers anywhere, so you add capacity by adding nodes.'],
+  ['SSE vs WebSockets — why SSE?',
+    'Server-Sent Events is a simple, HTTP-native, one-way (server-to-client) streaming protocol: a long-lived HTTP response that emits events over time, with built-in auto-reconnect. That is a perfect fit for fan-out workloads like token streams, dashboards, notifications, and feeds, where clients mostly receive. WebSockets are full-duplex and better when you need low-latency bidirectional messaging. RevenProx is purpose-built for the one-way, massive-fan-out SSE case; clients that need to send data back do so over ordinary HTTP requests.'],
+  ['How do I self-host and deploy RevenProx?',
+    'RevenProx builds to a single static binary with Zig (for example, zig build -Doptimize=ReleaseSafe) and runs on your own infrastructure. You run instances, they form the NNG mesh, and you scale by running more of them. Docker and Kubernetes deployment guides are provided in the documentation at docs.dotcommoners.com/revenprox.'],
+  ['How does authentication work?',
+    'Clients present a JWT, which RevenProx verifies via a webhook to your own auth service rather than embedding your auth logic. Verification results are cached so reconnect bursts do not hammer your auth service, and a circuit breaker trips if that upstream degrades — protecting a struggling dependency instead of amplifying the outage.'],
+  ['How are events routed to the right clients?',
+    'By UUID topic. Clients subscribe to a topic and publishers publish to a topic; the mesh routes each event only to the instances holding subscribers for that topic, which then write it down the matching local SSE connections. UUID topics give an effectively unlimited, collision-free namespace, so you can mint a topic per user, session, document, or conversation without coordination.'],
+  ['Why is RevenProx written in Zig?',
+    'Holding millions of mostly-idle connections makes per-connection memory, not CPU, the dominant cost. Zig has no garbage collector and no heavyweight runtime, giving small and predictable per-connection overhead — so a node’s capacity is a number you can plan a fleet around. That is what makes the 10M+ concurrent, 100+ instance target reachable.'],
+  ['How does RevenProx keep state consistent across the mesh?',
+    'With three primitives working together: bloom filters give each instance a compact summary of which topics it has subscribers for (so peers can skip forwarding events that would go nowhere); merkle trees let instances compare state by exchanging hashes and reconcile only the parts that differ; and vector clocks order updates across nodes without a global clock, detecting concurrent changes so the mesh converges instead of racing.'],
+  ['Is RevenProx a managed service?',
+    'No. RevenProx is self-hosted infrastructure that you run yourself — there is no vendor control plane and no per-message billing. If you would prefer never to operate a mesh, a managed pub/sub service trades that ownership for someone else running it; see the comparison page for the tradeoffs.'],
+];
+---
+<BaseLayout
+  title={title}
+  description={description}
+  keywords={keywords}
+  path="faq"
+  jsonLd={[faqSchema(faqs), breadcrumbSchema(crumbs), softwareAppSchema, orgSchema]}
+>
+  <Breadcrumbs items={crumbs} />
+
+  <section class="hero" style="padding-top:2rem;">
+    <div class="wrap prose">
+      <span class="eyebrow">FAQ</span>
+      <h1>RevenProx: frequently asked questions</h1>
+      <div class="answer">
+        <span class="label">Short answer</span>
+        <p>
+          <strong>RevenProx is an open-source Zig SSE proxy for streaming to 10M+ concurrent clients across
+          100+ instances over a brokerless NNG mesh</strong> — with UUID topic routing and webhook JWT auth.
+          It is MIT-licensed and self-hostable. The questions below cover scale, licensing, the mesh, SSE vs
+          WebSockets, deployment, and authentication.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:0;">
+    <div class="wrap">
+      <div class="faq" style="max-width:52rem;">
+        {faqs.map(([q, a]) => (
+          <details>
+            <summary>{q}</summary>
+            <p>{a}</p>
+          </details>
+        ))}
+      </div>
+      <p style="max-width:52rem; margin-top:1.6rem;">
+        Still have a question? <a href={url('contact')}>Contact us</a>, read the
+        <a href={DOCS}> documentation</a>, or browse the <a href={REPO}>source on GitHub</a>.
+      </p>
+    </div>
+  </section>
+
+  <section style="background:var(--bg-soft); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
+    <div class="wrap prose glossary">
+      <h2>Glossary</h2>
+      <dl class="glossary">
+        <dt>SSE (Server-Sent Events)</dt>
+        <dd>An HTTP-native protocol for one-way, server-to-client streaming over a single long-lived response, with automatic client reconnection.</dd>
+        <dt>Brokerless mesh</dt>
+        <dd>A topology where nodes communicate peer-to-peer with no central message broker, so there is no single coordinator to bottleneck or operate.</dd>
+        <dt>NNG</dt>
+        <dd>nanomsg-next-gen, the messaging library over which RevenProx instances form their peer-to-peer mesh.</dd>
+        <dt>Bloom filter</dt>
+        <dd>A compact, probabilistic data structure used to summarize which topics an instance holds subscribers for, so peers can skip pointless forwarding.</dd>
+        <dt>Merkle tree</dt>
+        <dd>A tree of hashes that lets two instances compare shared state cheaply and reconcile only the branches that differ.</dd>
+        <dt>Vector clock</dt>
+        <dd>A mechanism for ordering distributed updates without a global clock and detecting concurrent changes, so the mesh converges on consistent state.</dd>
+        <dt>UUID topic</dt>
+        <dd>A universally unique identifier naming a stream; clients subscribe and publishers publish by topic, giving targeted fan-out over an unlimited namespace.</dd>
+        <dt>Circuit breaker</dt>
+        <dd>A guard that stops calling a failing upstream (here, the auth webhook) once it degrades, protecting it from a thundering herd of retries.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head"><span class="eyebrow">Next</span><h2>Keep reading</h2></div>
+      <div class="next-links">
+        <a class="card" href={url('architecture')}><span class="k">Architecture</span><h3>How it works</h3><p>The NNG mesh, state sync, JWT auth, and memory model.</p></a>
+        <a class="card" href={url('use-cases')}><span class="k">Use cases</span><h3>Where this fits</h3><p>Token streaming, dashboards, notifications, market data.</p></a>
+        <a class="card" href={url('comparison')}><span class="k">Comparison</span><h3>vs. the alternatives</h3><p>Rolling your own vs. managed pub/sub vs. RevenProx.</p></a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

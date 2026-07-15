@@ -1,17 +1,23 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { GITHUB_ORG, WWW } from '../data/site.js';
+import { REPO, url } from '../data/site.js';
 ---
-<BaseLayout title="Page not found — dotcommoners" description="The page you were looking for does not exist." path="404">
+<BaseLayout title="Page not found — RevenProx" description="The page you were looking for does not exist." path="404">
   <section class="hero" style="text-align:center;">
     <div class="wrap">
       <span class="eyebrow">404</span>
       <h1>Nothing here</h1>
-      <p class="lede" style="margin:0 auto 2rem;">That page doesn't exist — but the source and the docs do.</p>
+      <p class="lede" style="margin:0 auto 2rem;">That page doesn't exist — but the docs, the source, and the rest of the site do.</p>
       <div style="display:flex; gap:.9rem; justify-content:center; flex-wrap:wrap;">
-        <a class="btn btn-primary" href={WWW}>Back home</a>
-        <a class="btn btn-ghost" href={GITHUB_ORG}>GitHub</a>
+        <a class="btn btn-primary" href={url('')}>Back home</a>
+        <a class="btn btn-ghost" href={REPO}>GitHub</a>
       </div>
+      <p style="margin-top:2rem;">
+        <a href={url('architecture')}>Architecture</a> ·
+        <a href={url('use-cases')}>Use cases</a> ·
+        <a href={url('comparison')}>Comparison</a> ·
+        <a href={url('faq')}>FAQ</a>
+      </p>
     </div>
   </section>
 </BaseLayout>

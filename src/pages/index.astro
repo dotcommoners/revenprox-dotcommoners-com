@@ -1,7 +1,10 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import FeatureIcon from '../components/FeatureIcon.astro';
+import DiagramFanout from '../components/DiagramFanout.astro';
+import DiagramMesh from '../components/DiagramMesh.astro';
 import {
-  CONTACT, REPO, DOCS, WWW, url,
+  CONTACT, REPO, DOCS, url,
   softwareAppSchema, sourceCodeSchema, orgSchema, websiteSchema, faqSchema,
 } from '../data/site.js';
 
@@ -15,12 +18,67 @@ const keywords = [
 ];
 
 const features = [
-  ['Massive scale', 'Architected for 10M+ concurrent SSE connections across 100+ proxy instances. You add capacity by adding instances to the mesh — throughput grows horizontally rather than pushing a single node harder.'],
-  ['Brokerless mesh', 'No central message broker to bottleneck, license, or babysit. State and events flow peer-to-peer across a fully distributed NNG mesh, kept consistent with bloom filters, merkle trees, and vector clocks.'],
-  ['UUID topic routing', 'Events are routed to subscribers by UUID topic, so each client receives exactly the streams it subscribed to — targeted fan-out instead of broadcasting everything to everyone.'],
-  ['JWT authentication', 'Clients are authenticated with webhook-based JWT verification. Results are cached to avoid re-hitting your auth service on every connect, and a circuit breaker shields that upstream when it degrades.'],
-  ['Built in Zig', 'No garbage collector and no heavyweight runtime means predictable, low per-connection memory — the property that actually governs cost when you hold millions of idle-but-open streams.'],
-  ['Self-hostable, MIT', 'Builds to a single static binary with Zig and runs on your own infrastructure. Docker and Kubernetes deployment guides are provided. Fully open source under the MIT license.'],
+  { icon: 'scale', h: 'Massive scale', p: 'Architected for 10M+ concurrent SSE connections across 100+ proxy instances. Add capacity by adding instances to the mesh — throughput grows horizontally instead of pushing a single node harder.' },
+  { icon: 'mesh', h: 'Brokerless mesh', p: 'No central message broker to bottleneck, license, or babysit. State and events flow peer-to-peer across a fully distributed NNG mesh, kept consistent with bloom filters, merkle trees, and vector clocks.' },
+  { icon: 'route', h: 'UUID topic routing', p: 'Events are routed to subscribers by UUID topic, so each client receives exactly the streams it subscribed to — targeted fan-out instead of broadcasting everything to everyone.' },
+  { icon: 'shield', h: 'JWT authentication', p: 'Clients are authenticated with webhook-based JWT verification. Results are cached to avoid re-hitting your auth service on every connect, and a circuit breaker shields that upstream when it degrades.' },
+  { icon: 'memory', h: 'Built in Zig', p: 'No garbage collector and no heavyweight runtime means predictable, low per-connection memory — the property that actually governs cost when you hold millions of idle-but-open streams.' },
+  { icon: 'open', h: 'Self-hostable, MIT', p: 'Builds to a single static binary with Zig and runs on your own infrastructure. Docker and Kubernetes deployment guides are provided. Fully open source under the MIT license.' },
+];
+
+const problems = [
+  { bad: 'A broker becomes the ceiling.', badp: 'Every message and subscription passes through a central broker, so it is the thing you over-provision, license, and page someone about at 3am.', good: 'Brokerless NNG mesh.', goodp: 'Instances peer directly; any node can accept a publish and route it to subscribers anywhere. You add throughput by adding nodes.' },
+  { bad: 'Idle connections are expensive.', badp: 'GC runtimes make millions of mostly-idle sockets costly and unpredictable — per-connection memory, not CPU, dominates the bill.', good: 'Low, predictable memory in Zig.', goodp: 'No garbage collector and manual memory layout keep per-connection overhead small and plannable across a fleet.' },
+  { bad: 'Everyone gets everything.', badp: 'Naive fan-out floods every event to every connection, wasting bandwidth and leaking streams to clients that never asked.', good: 'Targeted UUID topic routing.', goodp: 'Each event reaches only the instances holding subscribers for that topic, then only the matching local connections.' },
+  { bad: 'Auth storms take you down.', badp: 'Reconnect bursts hammer your auth service, and a degrading upstream turns into a thundering-herd outage.', good: 'Cached JWT + circuit breaker.', goodp: 'Verification results are cached, and a circuit breaker trips when the auth upstream degrades — protecting it instead of amplifying the failure.' },
+];
+
+const clientCode = `<span class="c-cm">// Browser client — subscribe to a UUID topic</span>
+<span class="c-key">const</span> <span class="c-var">es</span> <span class="c-punc">=</span> <span class="c-key">new</span> <span class="c-fn">EventSource</span><span class="c-punc">(</span>
+  <span class="c-str">"https://edge.example.com/events/9f1c-…-a2"</span><span class="c-punc">,</span>
+  <span class="c-punc">{</span> <span class="c-var">withCredentials</span><span class="c-punc">:</span> <span class="c-key">true</span> <span class="c-punc">}</span>
+<span class="c-punc">);</span>
+
+<span class="c-var">es</span><span class="c-punc">.</span><span class="c-fn">onmessage</span> <span class="c-punc">=</span> <span class="c-punc">(</span><span class="c-var">e</span><span class="c-punc">)</span> <span class="c-key">=></span> <span class="c-punc">{</span>
+  <span class="c-key">const</span> <span class="c-var">token</span> <span class="c-punc">=</span> <span class="c-var">JSON</span><span class="c-punc">.</span><span class="c-fn">parse</span><span class="c-punc">(</span><span class="c-var">e</span><span class="c-punc">.</span><span class="c-var">data</span><span class="c-punc">);</span>
+  <span class="c-fn">append</span><span class="c-punc">(</span><span class="c-var">token</span><span class="c-punc">.</span><span class="c-var">delta</span><span class="c-punc">);</span> <span class="c-cm">// e.g. an LLM token</span>
+<span class="c-punc">};</span>
+<span class="c-cm">// SSE auto-reconnects; the mesh routes by topic.</span>`;
+
+const configCode = `<span class="c-cm"># config/proxy.toml — one instance in the mesh</span>
+<span class="c-punc">[</span><span class="c-key">server</span><span class="c-punc">]</span>
+<span class="c-var">listen</span>        <span class="c-punc">=</span> <span class="c-str">"0.0.0.0:8080"</span>
+<span class="c-var">max_conns</span>     <span class="c-punc">=</span> <span class="c-num">2_000_000</span>
+
+<span class="c-punc">[</span><span class="c-key">mesh</span><span class="c-punc">]</span>          <span class="c-cm"># brokerless NNG peers</span>
+<span class="c-var">peers</span>         <span class="c-punc">=</span> <span class="c-punc">[</span><span class="c-str">"rp-2:7000"</span><span class="c-punc">,</span> <span class="c-str">"rp-3:7000"</span><span class="c-punc">]</span>
+<span class="c-var">gossip_ms</span>     <span class="c-punc">=</span> <span class="c-num">250</span>
+
+<span class="c-punc">[</span><span class="c-key">auth</span><span class="c-punc">]</span>          <span class="c-cm"># webhook JWT verify</span>
+<span class="c-var">webhook</span>       <span class="c-punc">=</span> <span class="c-str">"https://auth.example.com/verify"</span>
+<span class="c-var">cache_ttl_s</span>   <span class="c-punc">=</span> <span class="c-num">300</span>
+<span class="c-var">breaker</span>       <span class="c-punc">=</span> <span class="c-key">true</span>`;
+
+const heroTerm = `<span class="c-cm"># one static binary, then stream</span>
+<span class="c-cmd">$ zig</span> build -Doptimize=ReleaseSafe
+<span class="c-cmd">$ ./zig-out/bin/sse-proxy</span> --config proxy.toml
+<span class="c-str">▸ mesh</span>   peered rp-2, rp-3  <span class="c-cm">(brokerless)</span>
+<span class="c-str">▸ auth</span>   webhook JWT · cache · breaker=on
+<span class="c-str">▸ ready</span>  listening :8080  conns=<span class="c-num">0</span>/<span class="c-num">2000000</span>
+
+<span class="c-cm"># subscribe a client to a UUID topic</span>
+<span class="c-cmd">$ curl</span> -N localhost:8080/events/9f1c-a2 \\
+    -H <span class="c-str">"Authorization: Bearer &lt;jwt&gt;"</span>
+<span class="c-str">data:</span> {"delta":"Hello"}
+<span class="c-str">data:</span> {"delta":" world"}`;
+
+const useCases = [
+  { icon: 'bolt', h: 'AI & token streaming', p: 'Stream LLM tokens and agent events to huge audiences over a UUID topic per conversation — no broker in the path.' },
+  { icon: 'dashboard', h: 'Live dashboards & metrics', p: 'Push fresh numbers to millions of open dashboards; targeted routing means each viewer gets only its streams.' },
+  { icon: 'bell', h: 'Notifications & feeds', p: 'Deliver in-app notifications, activity, and presence the moment they happen, tied to your identity via JWT.' },
+  { icon: 'users', h: 'Multiplayer & collaboration', p: 'Broadcast the server-to-client half of live editors and shared sessions over a topic per room.' },
+  { icon: 'chart', h: 'Market data & price feeds', p: 'Fan high-frequency tickers and odds out per-symbol; add watchers by adding instances, not a bigger bus.' },
+  { icon: 'logs', h: 'CI/CD logs & build output', p: 'Relay bursty, long-lived build and deploy logs to browsers without polling or tying up app servers.' },
 ];
 
 const faqs = [
@@ -37,121 +95,182 @@ const faqs = [
   path=""
   jsonLd={[softwareAppSchema, sourceCodeSchema, orgSchema, websiteSchema, faqSchema(faqs)]}
 >
-  <section class="hero">
+  <!-- ============ HERO ============ -->
+  <section class="hero-x">
     <div class="wrap">
-      <span class="eyebrow">dotcommoners · Zig · MIT · SSE</span>
-      <h1>SSE streaming to <span class="grad">millions</span>, brokerless.</h1>
-      <p class="lede">
-        RevenProx is a high-performance Server-Sent Events proxy built in Zig. It fans real-time
-        event streams out to 10M+ concurrent clients across a distributed NNG mesh — with JWT auth,
-        UUID topic routing, and a per-connection memory footprint small enough to make it affordable.
-      </p>
-      <div style="display:flex; gap:.9rem; flex-wrap:wrap; margin-top:2rem;">
-        <a class="btn btn-primary" href={DOCS}>Read the docs</a>
-        <a class="btn btn-ghost" href={REPO}>View on GitHub →</a>
-      </div>
-      <div class="stats">
-        <div class="stat"><div class="n"><span class="grad">10M+</span></div><div class="k">Concurrent SSE connections</div></div>
-        <div class="stat"><div class="n">100+</div><div class="k">Proxy instances in one mesh</div></div>
-        <div class="stat"><div class="n">0</div><div class="k">Central brokers to run</div></div>
-        <div class="stat"><div class="n">MIT</div><div class="k">Open source, self-hostable</div></div>
+      <div class="hero-grid">
+        <div>
+          <span class="eyebrow">dotcommoners · Zig · MIT · SSE</span>
+          <h1>SSE streaming to <span class="grad">millions</span>, brokerless.</h1>
+          <p class="lede">
+            RevenProx is a high-performance Server-Sent Events proxy built in Zig. It fans real-time event
+            streams out to 10M+ concurrent clients across a distributed NNG mesh — with JWT auth, UUID topic
+            routing, and a per-connection memory footprint small enough to make it affordable.
+          </p>
+          <div style="display:flex; gap:.9rem; flex-wrap:wrap; margin-top:2rem;">
+            <a class="btn btn-primary" href={url('quickstart')}>Get started</a>
+            <a class="btn btn-ghost" href={REPO}>View on GitHub →</a>
+          </div>
+          <div class="badge-row">
+            <span class="badge live"><span class="d"></span>10M+ concurrent</span>
+            <span class="badge"><span class="d"></span>0 brokers</span>
+            <span class="badge"><span class="d"></span>100+ instances</span>
+            <span class="badge"><span class="d"></span>MIT · self-hosted</span>
+          </div>
+        </div>
+
+        <div>
+          <div class="terminal">
+            <div class="bar"><span class="dot3 r"></span><span class="dot3 y"></span><span class="dot3 g"></span><span class="name">revenprox — sse-proxy</span></div>
+            <pre><code set:html={heroTerm} /></pre>
+          </div>
+        </div>
       </div>
     </div>
   </section>
 
   <hr class="hr" />
 
+  <!-- ============ WHAT IS ============ -->
   <section>
-    <div class="wrap prose">
+    <div class="wrap prose" style="max-width:52rem;">
       <div class="answer">
         <span class="label">In one line</span>
         <p><strong>RevenProx is an open-source Zig SSE proxy for streaming real-time Server-Sent Events to 10M+ concurrent clients across 100+ instances over a brokerless NNG mesh</strong> — with JWT authentication, UUID topic-based routing, and a minimal per-connection memory footprint. MIT-licensed and self-hostable.</p>
       </div>
       <h2>The problem: SSE at the scale of the whole internet</h2>
       <p>
-        Server-Sent Events is the simplest way to push a one-way stream of updates from a server to a
-        browser: a long-lived HTTP response that stays open and emits events over time. It is ideal for
-        LLM token streams, live dashboards, notifications, and activity feeds. But the model has a hard
-        edge — each connection stays open for the client's entire session, so a popular application does not
-        have "requests per second," it has <em>millions of connections held open at once</em>.
+        Server-Sent Events is the simplest way to push a one-way stream of updates from a server to a browser:
+        a long-lived HTTP response that stays open and emits events over time. It is ideal for LLM token
+        streams, live dashboards, notifications, and activity feeds. But the model has a hard edge — each
+        connection stays open for the client's entire session, so a popular application does not have
+        "requests per second," it has <em>millions of connections held open at once</em>.
       </p>
       <p>
         At that scale the cost is not CPU; it is the memory and coordination overhead of every idle-but-open
         socket, and the fan-out problem of routing the right event to the right subset of those millions of
-        clients. General-purpose reverse proxies and managed pub/sub services can be pressed into the role,
-        but they either bottleneck on a central broker or make you pay per-message for infrastructure you
-        could own. RevenProx is purpose-built for exactly this shape of workload.
-      </p>
-
-      <h2>The approach: brokerless mesh, minimal memory</h2>
-      <p>
-        RevenProx sits at the streaming edge and holds the long-lived SSE connections. Instead of routing
-        all events through a central broker, the proxy instances form a <strong>fully distributed,
-        brokerless NNG mesh</strong>. State — which topics exist and which instances hold subscribers for
-        them — is synchronized peer-to-peer using <strong>bloom filters, merkle trees, and vector
-        clocks</strong>, so any instance can accept a publish and get it to every subscriber, wherever they
-        are connected, with no single coordinator to overload.
-      </p>
-      <p>
-        Because it is written in <strong>Zig</strong> — no garbage collector, no heavyweight runtime —
-        per-connection memory is small and predictable, which is what actually determines how many idle
-        streams a node can hold. That combination is what lets a fleet reach the 10M+ concurrent target.
+        clients. General-purpose reverse proxies and managed pub/sub services can be pressed into the role, but
+        they either bottleneck on a central broker or make you pay per-message for infrastructure you could own.
+        RevenProx is purpose-built for exactly this shape of workload.
       </p>
     </div>
   </section>
 
+  <!-- ============ PROBLEM -> SOLUTION ============ -->
   <section style="background:var(--bg-soft); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Problem → Solution</span>
+        <h2>Four hard problems, solved at the edge</h2>
+        <p>These are not app problems — they are streaming-infrastructure problems. RevenProx fixes each at the source.</p>
+      </div>
+      <div class="ps-grid">
+        {problems.map((x) => (
+          <div class="ps">
+            <div class="row"><span class="tag bad">Problem</span><p><strong>{x.bad}</strong> {x.badp}</p></div>
+            <div class="row"><span class="tag good">RevenProx</span><p><strong>{x.good}</strong> {x.goodp}</p></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FEATURE GRID ============ -->
+  <section>
     <div class="wrap">
       <div class="section-head">
         <span class="eyebrow">Capabilities</span>
         <h2>Real-time delivery, without a broker</h2>
         <p>Everything a streaming edge needs to hold millions of long-lived connections and route events precisely.</p>
       </div>
-      <div class="grid grid-2">
-        {features.map(([h, p]) => (<div class="card"><h3>{h}</h3><p>{p}</p></div>))}
+      <div class="feature-grid">
+        {features.map((f) => (
+          <div class="fcard">
+            <div class="ico"><FeatureIcon name={f.icon} /></div>
+            <h3>{f.h}</h3>
+            <p>{f.p}</p>
+          </div>
+        ))}
       </div>
-      <p style="margin-top:1.6rem;"><a href={url('architecture')}>See how the NNG mesh, state sync, and auth flow fit together →</a></p>
+      <p style="margin-top:1.8rem;"><a href={url('features')}>See the full feature breakdown →</a></p>
     </div>
   </section>
 
+  <!-- ============ CODE SHOWCASE ============ -->
+  <section style="background:var(--bg-soft); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Code</span>
+        <h2>Plain SSE on the client. A brokerless mesh behind it.</h2>
+        <p>Clients speak ordinary <code>EventSource</code> — no SDK. Each instance is a single Zig binary with a small config.</p>
+      </div>
+      <div class="code-two">
+        <div>
+          <div class="code-label"><span class="d good"></span>Client — subscribe with EventSource</div>
+          <div class="terminal"><div class="bar"><span class="dot3 r"></span><span class="dot3 y"></span><span class="dot3 g"></span><span class="name">client.js</span></div><pre><code set:html={clientCode} /></pre></div>
+        </div>
+        <div>
+          <div class="code-label"><span class="d good"></span>Server — one instance in the mesh</div>
+          <div class="terminal"><div class="bar"><span class="dot3 r"></span><span class="dot3 y"></span><span class="dot3 g"></span><span class="name">proxy.toml</span></div><pre><code set:html={configCode} /></pre></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ARCHITECTURE DIAGRAMS ============ -->
   <section>
     <div class="wrap">
       <div class="section-head">
-        <span class="eyebrow">Quick start</span>
-        <h2>One binary, then stream</h2>
-        <p>Build with Zig, point clients at a topic, and start delivering events.</p>
+        <span class="eyebrow">How it works</span>
+        <h2>One publish, fanned out — no coordinator</h2>
+        <p>A publish on any instance reaches every subscriber for that topic, wherever they are connected.</p>
       </div>
-      <pre class="codeblock"><code><span class="c-cm"># Clone and build a single static binary</span>
-<span class="c-cmd">git</span> clone https://github.com/dotcommoners/revenprox.git
-<span class="c-cmd">cd</span> revenprox
-<span class="c-cmd">zig</span> build -Doptimize=ReleaseSafe
-
-<span class="c-cm"># Run the proxy</span>
-<span class="c-cmd">./zig-out/bin/sse-proxy</span> --config config/proxy.toml
-
-<span class="c-cm"># Subscribe a client to a topic (JWT-authenticated)</span>
-<span class="c-cmd">curl</span> -N "http://localhost:8080/events/my-topic" -H "Authorization: Bearer &lt;jwt&gt;"</code></pre>
-      <p style="margin-top:1rem;"><a href={DOCS}>Full build, configuration &amp; deployment guide →</a></p>
+      <DiagramFanout />
+      <div class="callout" style="margin-top:2.4rem;">
+        <span class="ci"><FeatureIcon name="mesh" /></span>
+        <p><strong>Brokerless by design.</strong> Instances peer over NNG and keep distributed state consistent with bloom filters, merkle trees, and vector clocks — so there is no single node to bottleneck, license, or page someone about.</p>
+      </div>
+      <DiagramMesh />
+      <p style="margin-top:1.8rem;"><a href={url('architecture')}>Read the full architecture — data path, state sync, auth flow, memory model →</a></p>
     </div>
   </section>
 
+  <!-- ============ STATS STRIP ============ -->
   <section style="background:var(--bg-soft); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
+    <div class="wrap">
+      <div class="stats">
+        <div class="stat"><div class="n"><span class="grad">10M+</span></div><div class="k">Concurrent SSE connections</div></div>
+        <div class="stat"><div class="n">100+</div><div class="k">Proxy instances in one mesh</div></div>
+        <div class="stat"><div class="n">0</div><div class="k">Central brokers to run</div></div>
+        <div class="stat"><div class="n">Zig</div><div class="k">No GC · predictable memory</div></div>
+        <div class="stat"><div class="n">MIT</div><div class="k">Open source, self-hostable</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ USE CASES ============ -->
+  <section>
     <div class="wrap">
       <div class="section-head">
         <span class="eyebrow">Use cases</span>
         <h2>Where RevenProx fits</h2>
         <p>Any workload that pushes a one-way, real-time event stream to a very large audience.</p>
       </div>
-      <div class="grid grid-3">
-        <div class="card"><h3>AI &amp; token streaming</h3><p>Stream LLM tokens and agent/inference events to huge audiences without a broker bottleneck.</p></div>
-        <div class="card"><h3>Live dashboards &amp; notifications</h3><p>Push metrics, alerts, and real-time updates to millions of open browser tabs.</p></div>
-        <div class="card"><h3>Build logs &amp; live feeds</h3><p>Relay CI/CD output, activity feeds, and one-way event streams at the edge.</p></div>
+      <div class="feature-grid">
+        {useCases.map((c) => (
+          <div class="fcard">
+            <div class="ico"><FeatureIcon name={c.icon} /></div>
+            <h3>{c.h}</h3>
+            <p>{c.p}</p>
+          </div>
+        ))}
       </div>
-      <p style="margin-top:1.6rem;"><a href={url('use-cases')}>Explore detailed use cases →</a></p>
+      <p style="margin-top:1.8rem;"><a href={url('use-cases')}>Explore detailed use cases →</a></p>
     </div>
   </section>
 
-  <section>
+  <!-- ============ WHO / NEXT ============ -->
+  <section style="background:var(--bg-soft); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
     <div class="wrap">
       <div class="section-head">
         <span class="eyebrow">Who it's for</span>
@@ -163,32 +282,35 @@ const faqs = [
         </p>
       </div>
       <div class="next-links">
+        <a class="card" href={url('quickstart')}><span class="k">Quickstart</span><h3>Deploy in minutes</h3><p>Build the binary, form the mesh, subscribe a client, scale out.</p></a>
         <a class="card" href={url('architecture')}><span class="k">Architecture</span><h3>How it works</h3><p>The NNG mesh, state sync, JWT auth flow, and memory model.</p></a>
         <a class="card" href={url('comparison')}><span class="k">Comparison</span><h3>vs. the alternatives</h3><p>RevenProx vs. rolling your own vs. managed pub/sub.</p></a>
-        <a class="card" href={url('faq')}><span class="k">FAQ</span><h3>Common questions</h3><p>Scale, licensing, SSE vs WebSockets, self-hosting, auth.</p></a>
       </div>
     </div>
   </section>
 
-  <section style="background:var(--bg-soft); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
+  <!-- ============ FAQ ============ -->
+  <section>
     <div class="wrap">
       <div class="section-head"><span class="eyebrow">FAQ</span><h2>Questions</h2></div>
-      <div class="faq" style="max-width:48rem;">
+      <div class="faq" style="max-width:52rem;">
         {faqs.map(([q, a]) => (<details><summary>{q}</summary><p>{a}</p></details>))}
       </div>
-      <p style="margin-top:1.2rem;"><a href={url('faq')}>Read the full FAQ →</a></p>
+      <p style="margin-top:1.2rem;"><a href={url('faq')}>Read the full FAQ &amp; glossary →</a></p>
     </div>
   </section>
 
-  <section style="text-align:center;">
+  <!-- ============ CTA ============ -->
+  <section style="text-align:center; background:var(--bg-soft); border-top:1px solid var(--border);">
     <div class="wrap">
       <h2>Stream at scale</h2>
       <p style="max-width:34rem; margin:0 auto 2rem;">Read the docs, browse the source, or reach out. Open source and self-hostable.</p>
       <div style="display:flex; gap:.9rem; justify-content:center; flex-wrap:wrap;">
-        <a class="btn btn-primary" href={REPO}>github.com/dotcommoners/revenprox</a>
+        <a class="btn btn-primary" href={url('quickstart')}>Get started</a>
+        <a class="btn btn-ghost" href={REPO}>github.com/dotcommoners/revenprox</a>
         <a class="btn btn-ghost" href={url('contact')}>Contact us</a>
-        <a class="btn btn-ghost" href={`mailto:${CONTACT}`}>{CONTACT}</a>
       </div>
+      <p style="margin-top:1.4rem; font-size:.9rem;"><a href={`mailto:${CONTACT}`}>{CONTACT}</a> · <a href={DOCS}>Documentation</a></p>
     </div>
   </section>
 </BaseLayout>

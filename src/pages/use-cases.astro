@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
+import FeatureIcon from '../components/FeatureIcon.astro';
 import { REPO, DOCS, url, breadcrumbSchema, orgSchema } from '../data/site.js';
 
 const title = 'RevenProx Use Cases — SSE streaming at scale';
@@ -18,26 +19,32 @@ const crumbs = [
 
 const cases = [
   {
+    icon: 'bolt',
     h: 'LLM token & agent event streaming',
     p: 'Generative apps stream tokens as they are produced — a naturally one-way, long-lived stream per request. When a model or agent serves a large audience, you have millions of open streams at once. RevenProx uses a UUID topic per conversation or request, fans model output to the right client with no broker in the path, and holds the idle-between-tokens connections cheaply thanks to Zig’s low per-connection memory.',
   },
   {
+    icon: 'dashboard',
     h: 'Live dashboards & metrics',
     p: 'Operational dashboards, analytics, and monitoring views want a continuous push of fresh numbers rather than polling. Publish metric updates to a topic and every open dashboard subscribed to it updates in real time. Targeted topic routing means a given dashboard only receives the streams it subscribed to, so you are not broadcasting every metric to every viewer.',
   },
   {
+    icon: 'bell',
     h: 'Real-time notifications & activity feeds',
     p: 'In-app notifications, activity feeds, and presence updates are one-way pushes to potentially millions of connected users. Mint a topic per user or per channel and deliver events the moment they happen. Webhook-based JWT auth ties each subscription to your existing identity system so users only receive their own streams.',
   },
   {
+    icon: 'users',
     h: 'Multiplayer & collaboration',
     p: 'Collaborative editors, live cursors, and shared-session state broadcast a stream of changes to everyone in a room. A topic per room or document routes updates to exactly its participants. SSE is a clean fit for the server-to-client broadcast half of these apps, letting clients POST their own changes back over ordinary requests.',
   },
   {
+    icon: 'chart',
     h: 'Market data & price feeds',
     p: 'Financial tickers, sports scores, betting odds, and other high-frequency feeds push updates to large numbers of watchers. Per-symbol or per-market UUID topics route each feed to just its subscribers, and a brokerless mesh means adding watchers is a matter of adding proxy instances rather than scaling a central bus.',
   },
   {
+    icon: 'logs',
     h: 'CI/CD logs & build output',
     p: 'Streaming build logs, deploy progress, and job output to a browser is one-way, bursty, and long-lived. Relay the output stream over a topic so anyone watching a build sees lines as they are emitted, without polling an API or holding the connection open on your application servers.',
   },
@@ -71,8 +78,14 @@ const cases = [
 
   <section style="padding-top:0;">
     <div class="wrap">
-      <div class="grid grid-2">
-        {cases.map((c) => (<div class="card"><h3>{c.h}</h3><p>{c.p}</p></div>))}
+      <div class="feature-grid">
+        {cases.map((c) => (
+          <div class="fcard">
+            <div class="ico"><FeatureIcon name={c.icon} /></div>
+            <h3>{c.h}</h3>
+            <p>{c.p}</p>
+          </div>
+        ))}
       </div>
     </div>
   </section>

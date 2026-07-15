@@ -1,6 +1,9 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
+import DiagramFanout from '../components/DiagramFanout.astro';
+import DiagramMesh from '../components/DiagramMesh.astro';
+import FeatureIcon from '../components/FeatureIcon.astro';
 import {
   REPO, DOCS, WWW, url, SITE,
   breadcrumbSchema, orgSchema,
@@ -59,16 +62,26 @@ const techArticle = {
   </section>
 
   <section style="padding-top:0;">
-    <div class="wrap prose">
-      <h2>The data path, end to end</h2>
-      <ol>
-        <li><strong>Connect.</strong> A client opens a long-lived SSE request (e.g. <code>GET /events/&lt;topic&gt;</code>) against any proxy instance and passes a JWT.</li>
-        <li><strong>Authenticate.</strong> The instance verifies the JWT via a webhook to your auth service, caching the result so repeat connects do not re-hit the upstream.</li>
-        <li><strong>Subscribe.</strong> The connection is registered against a UUID topic. Membership for that topic propagates across the mesh so every instance knows a subscriber exists.</li>
-        <li><strong>Publish.</strong> An event published to a topic — on any instance — is relayed across the NNG mesh to exactly the instances holding subscribers for that topic.</li>
-        <li><strong>Deliver.</strong> Each instance writes the event down its local matching SSE connections. No event travels to an instance that has no subscribers for the topic.</li>
-      </ol>
+    <div class="wrap">
+      <DiagramFanout />
+    </div>
+  </section>
 
+  <section style="padding-top:0;">
+    <div class="wrap">
+      <div class="section-head" style="max-width:52rem;"><span class="eyebrow">Data path</span><h2>End to end, one event</h2><p>From a client opening a stream to that client receiving a published event.</p></div>
+      <div class="steps" style="max-width:52rem;">
+        <div class="step"><div class="num"></div><div><h3>Connect</h3><p>A client opens a long-lived SSE request (e.g. <code>GET /events/&lt;topic&gt;</code>) against any proxy instance and passes a JWT.</p></div></div>
+        <div class="step"><div class="num"></div><div><h3>Authenticate</h3><p>The instance verifies the JWT via a webhook to your auth service, caching the result so repeat connects do not re-hit the upstream.</p></div></div>
+        <div class="step"><div class="num"></div><div><h3>Subscribe</h3><p>The connection is registered against a UUID topic. Membership propagates across the mesh so every instance knows a subscriber exists.</p></div></div>
+        <div class="step"><div class="num"></div><div><h3>Publish</h3><p>An event published to a topic — on any instance — is relayed across the NNG mesh to exactly the instances holding subscribers for that topic.</p></div></div>
+        <div class="step"><div class="num"></div><div><h3>Deliver</h3><p>Each instance writes the event down its local matching SSE connections. No event travels to an instance that has no subscribers for the topic.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:0;">
+    <div class="wrap prose">
       <h2>The brokerless NNG mesh</h2>
       <p>
         The defining decision in RevenProx is that there is <strong>no central message broker</strong>. A
@@ -110,7 +123,9 @@ const techArticle = {
         Together these make state sync <em>gossip-friendly and bandwidth-cheap</em>: instances mostly confirm
         they already agree, and only exchange real data when something has actually changed.
       </p>
-
+    </div>
+    <div class="wrap"><DiagramMesh /></div>
+    <div class="wrap prose">
       <h2>UUID topic-based routing</h2>
       <p>
         Every stream is a <strong>UUID topic</strong>. Clients subscribe to a topic; publishers publish to a
@@ -142,6 +157,11 @@ const techArticle = {
         makes the 10M+ concurrent, 100+ instance target reachable.
       </p>
 
+      <div class="callout">
+        <span class="ci"><FeatureIcon name="memory" /></span>
+        <p><strong>Memory, not CPU, is the budget.</strong> With millions of mostly-idle streams, a node's capacity is governed by predictable per-connection memory — which is exactly why RevenProx is written in Zig rather than a GC language.</p>
+      </div>
+
       <h2>Deployment shape</h2>
       <p>
         RevenProx builds to a <strong>single static binary</strong> with Zig and is
@@ -161,9 +181,9 @@ const techArticle = {
     <div class="wrap">
       <div class="section-head"><span class="eyebrow">Next</span><h2>Keep reading</h2></div>
       <div class="next-links">
+        <a class="card" href={url('quickstart')}><span class="k">Quickstart</span><h3>Deploy it</h3><p>Build, form the mesh, subscribe a client, and scale out.</p></a>
         <a class="card" href={url('use-cases')}><span class="k">Use cases</span><h3>Where this fits</h3><p>Token streaming, live dashboards, notifications, market data.</p></a>
         <a class="card" href={url('comparison')}><span class="k">Comparison</span><h3>vs. the alternatives</h3><p>Rolling your own SSE vs. managed pub/sub vs. RevenProx.</p></a>
-        <a class="card" href={url('faq')}><span class="k">FAQ</span><h3>Common questions</h3><p>Scale, licensing, SSE vs WebSockets, self-hosting.</p></a>
       </div>
     </div>
   </section>

@@ -166,6 +166,44 @@ Is it a managed service? No. It is self-hosted infrastructure with no vendor con
 
 ---
 
+## Features
+
+Scale & topology:
+- Built for 10M+ concurrent SSE connections across 100+ instances; capacity scales by adding nodes.
+- Brokerless NNG mesh — instances peer directly, with no central message broker; any instance can accept a publish and route it to subscribers anywhere.
+- Horizontal by construction: adding throughput means adding nodes, with no shared coordinator to over-provision.
+
+State & routing:
+- UUID topic routing: every stream is a UUID topic; each event is delivered only to instances holding matching subscribers, over an effectively unlimited namespace.
+- Gossip state sync: bloom filters summarize which topics an instance serves, merkle trees reconcile only differing state, and vector clocks order updates without a global clock.
+- No wasted fan-out: bloom-filter summaries let instances skip forwarding events that would land nowhere.
+
+Security & resilience:
+- Webhook JWT verification against your own auth service — the proxy enforces identity you own.
+- Verification caching so reconnect bursts do not hammer the auth service.
+- Circuit breaker that trips when the auth upstream degrades, protecting it from a thundering herd.
+
+Runtime & operations:
+- Low, predictable per-connection memory from Zig — no garbage collector, manual memory layout.
+- Single static binary (e.g. `zig build -Doptimize=ReleaseSafe`); no runtime to install.
+- Self-hosted with no vendor control plane; Docker and Kubernetes guides provided; MIT-licensed.
+
+---
+
+## Quickstart
+
+Deploy RevenProx as a brokerless mesh in five steps:
+
+1. Build the binary — clone the repo and run `zig build -Doptimize=ReleaseSafe`, producing `./zig-out/bin/sse-proxy` as a single static binary.
+2. Configure the mesh & auth — set each instance's listen address, its NNG peers, and the webhook JWT endpoint (with caching TTL and circuit breaker) in `config/proxy.toml`.
+3. Run an instance — `./zig-out/bin/sse-proxy --config config/proxy.toml`; it joins the mesh, peers with the other instances, and begins accepting SSE connections.
+4. Subscribe a client — clients speak ordinary SSE; open an `EventSource` (or `curl -N`) against `/events/<uuid-topic>` with a JWT and receive events as they are published.
+5. Scale out — run more instances; each peers into the brokerless mesh, so throughput and connection capacity grow horizontally with no central broker to grow with them.
+
+RevenProx is self-hosted with no control plane. Full build, configuration, and Docker/Kubernetes deployment guides are in the documentation.
+
+---
+
 ## Resources
 
 - Repository: https://github.com/dotcommoners/revenprox

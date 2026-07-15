@@ -28,11 +28,12 @@ const B = import.meta.env.BASE_URL.replace(/\/$/, '');
 export const url = (p = '') => `${B}/${String(p).replace(/^\//, '')}`.replace(/\/+/g, '/') || '/';
 
 export const NAV = [
+  { label: 'Features', href: url('features') },
   { label: 'Architecture', href: url('architecture') },
-  { label: 'Use cases', href: url('use-cases') },
+  { label: 'Use cases', href: url('use-cases'), sm: true },
+  { label: 'Quickstart', href: url('quickstart') },
   { label: 'Comparison', href: url('comparison'), sm: true },
-  { label: 'FAQ', href: url('faq') },
-  { label: 'Docs', href: DOCS, sm: true },
+  { label: 'FAQ', href: url('faq'), sm: true },
   { label: 'GitHub', href: REPO },
 ];
 

@@ -1,5 +1,5 @@
 ---
-import { NAV, url } from '../data/site.js';
+import { NAV, REPO, url } from '../data/site.js';
 ---
 <header class="site-header">
   <div class="wrap">
@@ -11,6 +11,25 @@ import { NAV, url } from '../data/site.js';
       {NAV.map((item) => (
         <a href={item.href} class={item.sm ? 'hide-sm' : ''}>{item.label}</a>
       ))}
+      <a class="btn btn-primary btn-sm hide-sm" href={REPO}>GitHub ★</a>
     </nav>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
   </div>
+  <nav class="mobile-nav" id="mobile-nav" aria-label="Mobile">
+    {NAV.map((item) => (<a href={item.href}>{item.label}</a>))}
+  </nav>
 </header>
+
+<script is:inline>
+  (function () {
+    var btn = document.getElementById('nav-toggle');
+    var menu = document.getElementById('mobile-nav');
+    if (!btn || !menu) return;
+    btn.addEventListener('click', function () {
+      var open = menu.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  })();
+</script>

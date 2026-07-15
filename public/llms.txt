@@ -25,7 +25,9 @@ RevenProx sits at the streaming edge and relays long-lived Server-Sent Events co
 ## Pages
 
 - [Overview](https://revenprox.dotcommoners.com/): what RevenProx is, the SSE-at-scale problem, and its brokerless approach
+- [Features](https://revenprox.dotcommoners.com/features): scale & topology, UUID topic routing, gossip state sync, webhook JWT auth, and the Zig runtime
 - [Architecture](https://revenprox.dotcommoners.com/architecture): the NNG mesh, bloom/merkle/vector-clock state sync, UUID topic routing, JWT auth flow, and the Zig memory model
+- [Quickstart](https://revenprox.dotcommoners.com/quickstart): build the binary, configure the mesh + auth, run an instance, subscribe a client, and scale out
 - [Use cases](https://revenprox.dotcommoners.com/use-cases): token streaming, dashboards, notifications, multiplayer, market data, build logs
 - [Comparison](https://revenprox.dotcommoners.com/comparison): RevenProx vs. rolling your own SSE vs. managed pub/sub
 - [FAQ](https://revenprox.dotcommoners.com/faq): scale, licensing, brokerless mesh, SSE vs WebSockets, self-hosting, auth

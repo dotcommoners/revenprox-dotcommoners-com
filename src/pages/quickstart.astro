@@ -1,0 +1,171 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import FeatureIcon from '../components/FeatureIcon.astro';
+import DiagramFanout from '../components/DiagramFanout.astro';
+import {
+  REPO, DOCS, WWW, url, SITE,
+  breadcrumbSchema, orgSchema, softwareAppSchema,
+} from '../data/site.js';
+
+const title = 'RevenProx Quickstart — build, run & scale the SSE proxy';
+const description =
+  'Deploy RevenProx: build the single Zig binary, configure the brokerless NNG mesh, subscribe a client to a UUID topic, wire JWT auth, and scale horizontally.';
+const keywords = [
+  'RevenProx quickstart', 'deploy SSE proxy', 'zig build sse proxy', 'run RevenProx',
+  'self-host SSE mesh', 'scale SSE proxy Kubernetes', 'getting started RevenProx',
+];
+
+const crumbs = [
+  { label: 'RevenProx', path: '' },
+  { label: 'Quickstart', path: 'quickstart' },
+];
+
+const howTo = {
+  '@context': 'https://schema.org',
+  '@type': 'HowTo',
+  name: 'Deploy RevenProx',
+  description: 'Build, run, and scale the RevenProx SSE proxy as a brokerless mesh.',
+  step: [
+    { '@type': 'HowToStep', name: 'Build the binary', text: 'Clone the repository and build a single static binary with Zig using ReleaseSafe.' },
+    { '@type': 'HowToStep', name: 'Configure the mesh', text: 'Point each instance at its peers over NNG and set the webhook JWT auth endpoint.' },
+    { '@type': 'HowToStep', name: 'Run an instance', text: 'Start the proxy with its config; it joins the mesh and begins accepting SSE connections.' },
+    { '@type': 'HowToStep', name: 'Subscribe a client', text: 'Open an EventSource against a UUID topic with a JWT and receive events as they are published.' },
+    { '@type': 'HowToStep', name: 'Scale out', text: 'Add more instances to the mesh; capacity and throughput grow horizontally with no central broker.' },
+  ],
+  url: `${SITE}/quickstart`,
+};
+
+const buildCode = `<span class="c-cm"># 1 — clone and build a single static binary</span>
+<span class="c-cmd">git</span> clone https://github.com/dotcommoners/revenprox.git
+<span class="c-cmd">cd</span> revenprox
+<span class="c-cmd">zig</span> build -Doptimize=ReleaseSafe
+<span class="c-cm"># → ./zig-out/bin/sse-proxy</span>`;
+
+const runCode = `<span class="c-cm"># 3 — run an instance (joins the mesh on start)</span>
+<span class="c-cmd">./zig-out/bin/sse-proxy</span> --config config/proxy.toml
+<span class="c-str">▸ mesh</span>   peered rp-2, rp-3  <span class="c-cm">(brokerless)</span>
+<span class="c-str">▸ ready</span>  listening :8080</span>`;
+
+const subCode = `<span class="c-cm"># 4 — subscribe a client to a UUID topic (JWT-authenticated)</span>
+<span class="c-cmd">curl</span> -N "http://localhost:8080/events/9f1c-a2" \\
+  -H <span class="c-str">"Authorization: Bearer &lt;jwt&gt;"</span>
+
+<span class="c-str">data:</span> {"delta":"Hello"}
+<span class="c-str">data:</span> {"delta":" world"}`;
+
+const dockerCode = `<span class="c-cm"># 5 — scale out: run more instances (Docker/K8s guides in docs)</span>
+<span class="c-cmd">docker</span> run -p 8080:8080 -v $PWD/config:/config \\
+  ghcr.io/dotcommoners/revenprox --config /config/proxy.toml
+<span class="c-cm"># each replica peers into the mesh; add replicas to add capacity</span>`;
+---
+<BaseLayout
+  title={title}
+  description={description}
+  keywords={keywords}
+  path="quickstart"
+  jsonLd={[howTo, breadcrumbSchema(crumbs), softwareAppSchema, orgSchema]}
+>
+  <Breadcrumbs items={crumbs} />
+
+  <section class="hero" style="padding-top:2rem;">
+    <div class="wrap prose" style="max-width:52rem;">
+      <span class="eyebrow">Quickstart</span>
+      <h1>Deploy RevenProx</h1>
+      <div class="answer">
+        <span class="label">In short</span>
+        <p>
+          <strong>Build one static Zig binary, point each instance at its peers, and start streaming.</strong>
+          RevenProx is self-hosted: instances form a brokerless NNG mesh, clients subscribe to UUID topics over
+          ordinary SSE, and you scale by running more instances. Docker and Kubernetes deployment guides live in
+          the <a href={DOCS}>documentation</a>.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:0;">
+    <div class="wrap" style="max-width:52rem;">
+      <div class="steps">
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h3>Build the binary</h3>
+            <p>Clone the repo and build with Zig. The result is a single static binary — no runtime to install.</p>
+            <div class="terminal" style="margin-top:1rem;"><div class="bar"><span class="dot3 r"></span><span class="dot3 y"></span><span class="dot3 g"></span><span class="name">build</span></div><pre><code set:html={buildCode} /></pre></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h3>Configure the mesh &amp; auth</h3>
+            <p>Give each instance its listen address, its NNG peers, and your webhook JWT endpoint. Caching and the circuit breaker protect that upstream under reconnect storms.</p>
+            <div class="terminal" style="margin-top:1rem;"><div class="bar"><span class="dot3 r"></span><span class="dot3 y"></span><span class="dot3 g"></span><span class="name">config/proxy.toml</span></div><pre><code><span class="c-cm"># 2 — one instance in the mesh</span>
+<span class="c-punc">[</span><span class="c-key">server</span><span class="c-punc">]</span>
+<span class="c-var">listen</span>      <span class="c-punc">=</span> <span class="c-str">"0.0.0.0:8080"</span>
+<span class="c-var">max_conns</span>   <span class="c-punc">=</span> <span class="c-num">2_000_000</span>
+
+<span class="c-punc">[</span><span class="c-key">mesh</span><span class="c-punc">]</span>
+<span class="c-var">peers</span>       <span class="c-punc">=</span> <span class="c-punc">[</span><span class="c-str">"rp-2:7000"</span><span class="c-punc">,</span> <span class="c-str">"rp-3:7000"</span><span class="c-punc">]</span>
+
+<span class="c-punc">[</span><span class="c-key">auth</span><span class="c-punc">]</span>
+<span class="c-var">webhook</span>     <span class="c-punc">=</span> <span class="c-str">"https://auth.example.com/verify"</span>
+<span class="c-var">cache_ttl_s</span> <span class="c-punc">=</span> <span class="c-num">300</span>
+<span class="c-var">breaker</span>     <span class="c-punc">=</span> <span class="c-key">true</span></code></pre></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h3>Run an instance</h3>
+            <p>Start the proxy with its config. It joins the mesh, peers with the other instances, and begins accepting SSE connections.</p>
+            <div class="terminal" style="margin-top:1rem;"><div class="bar"><span class="dot3 r"></span><span class="dot3 y"></span><span class="dot3 g"></span><span class="name">run</span></div><pre><code set:html={runCode} /></pre></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h3>Subscribe a client</h3>
+            <p>Clients speak ordinary SSE. Open an <code>EventSource</code> (or <code>curl -N</code>) against a UUID topic with a JWT and receive events as they are published — the mesh routes each event to just the right subscribers.</p>
+            <div class="terminal" style="margin-top:1rem;"><div class="bar"><span class="dot3 r"></span><span class="dot3 y"></span><span class="dot3 g"></span><span class="name">subscribe</span></div><pre><code set:html={subCode} /></pre></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h3>Scale out</h3>
+            <p>Need more capacity? Run more instances. Each new node peers into the brokerless mesh, so throughput and connection capacity grow horizontally — there is no central broker to grow with them.</p>
+            <div class="terminal" style="margin-top:1rem;"><div class="bar"><span class="dot3 r"></span><span class="dot3 y"></span><span class="dot3 g"></span><span class="name">scale</span></div><pre><code set:html={dockerCode} /></pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout">
+        <span class="ci"><FeatureIcon name="open" /></span>
+        <p><strong>Self-hosted, no control plane.</strong> RevenProx runs entirely on your infrastructure. The full build, configuration, and Docker/Kubernetes deployment guides are in the <a href={DOCS}>documentation</a>, and the source is on <a href={REPO}>GitHub</a>.</p>
+      </div>
+    </div>
+  </section>
+
+  <section style="background:var(--bg-soft); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
+    <div class="wrap">
+      <div class="section-head"><span class="eyebrow">What you get</span><h2>The shape of a running deployment</h2><p>A publish on any instance reaches every subscriber for that topic, across the fleet.</p></div>
+      <DiagramFanout />
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head"><span class="eyebrow">Next</span><h2>Keep reading</h2></div>
+      <div class="next-links">
+        <a class="card" href={url('architecture')}><span class="k">Architecture</span><h3>How it works</h3><p>The NNG mesh, state sync, JWT auth, and memory model.</p></a>
+        <a class="card" href={url('features')}><span class="k">Features</span><h3>The full list</h3><p>Scale, routing, security, and runtime capabilities.</p></a>
+        <a class="card" href={url('faq')}><span class="k">FAQ</span><h3>Common questions</h3><p>Scale, licensing, SSE vs WebSockets, self-hosting, auth.</p></a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

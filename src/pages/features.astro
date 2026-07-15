@@ -1,0 +1,122 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import FeatureIcon from '../components/FeatureIcon.astro';
+import DiagramMesh from '../components/DiagramMesh.astro';
+import {
+  REPO, DOCS, WWW, url, SITE,
+  breadcrumbSchema, orgSchema, softwareAppSchema,
+} from '../data/site.js';
+
+const title = 'RevenProx Features — brokerless SSE fan-out at scale';
+const description =
+  'RevenProx features: 10M+ concurrent SSE connections, a brokerless NNG mesh, UUID topic routing, cached webhook JWT auth, and a low-memory Zig runtime.';
+const keywords = [
+  'RevenProx features', 'brokerless SSE proxy', 'NNG mesh features', 'UUID topic routing',
+  'webhook JWT auth', 'Zig low memory streaming', 'SSE fan-out at scale',
+];
+
+const crumbs = [
+  { label: 'RevenProx', path: '' },
+  { label: 'Features', path: 'features' },
+];
+
+const groups = [
+  {
+    label: 'Scale & topology',
+    items: [
+      { icon: 'scale', h: 'Built for 10M+ connections', p: 'Architected to hold 10M+ concurrent SSE streams across 100+ instances. Capacity is a function of how many nodes you run, so you scale out by adding instances to the mesh rather than pushing one node to its limit.' },
+      { icon: 'mesh', h: 'Brokerless NNG mesh', p: 'Instances peer directly over NNG (nanomsg-next-gen) — there is no central message broker. Any instance can accept a publish and route it to subscribers anywhere, removing the classic pub/sub scaling ceiling.' },
+      { icon: 'binary', h: 'Horizontal by construction', p: 'Adding throughput means adding nodes. There is no shared coordinator to over-provision, and no single point that must grow to match your busiest topic.' },
+    ],
+  },
+  {
+    label: 'State & routing',
+    items: [
+      { icon: 'route', h: 'UUID topic routing', p: 'Every stream is a UUID topic. Clients subscribe by topic, publishers publish by topic, and the mesh delivers each event only to the instances holding matching subscribers — targeted fan-out over an effectively unlimited namespace.' },
+      { icon: 'cache', h: 'Gossip state sync', p: 'Bloom filters summarize which topics an instance serves, merkle trees reconcile only the parts of state that differ, and vector clocks order updates without a global clock — so instances mostly confirm they already agree.' },
+      { icon: 'broadcast', h: 'No wasted fan-out', p: 'Bloom-filter summaries let instances skip forwarding events that would land nowhere, keeping mesh traffic proportional to real subscriptions instead of flooding every node.' },
+    ],
+  },
+  {
+    label: 'Security & resilience',
+    items: [
+      { icon: 'shield', h: 'Webhook JWT verification', p: 'Clients present a JWT that RevenProx validates via a webhook to your own auth service — your identity logic stays yours, and the proxy simply enforces it on connect.' },
+      { icon: 'cache', h: 'Verification caching', p: 'Results are cached so a burst of reconnects for an already-seen token does not translate into a burst of calls to your auth service.' },
+      { icon: 'shield', h: 'Circuit breaker', p: 'If the auth upstream degrades, the breaker trips and stops hammering it — protecting a struggling dependency from a thundering herd instead of amplifying the outage.' },
+    ],
+  },
+  {
+    label: 'Runtime & operations',
+    items: [
+      { icon: 'memory', h: 'Low, predictable memory', p: 'Written in Zig with no garbage collector and manual memory layout, per-connection overhead is small and predictable — the property that actually governs cost when connections are mostly idle.' },
+      { icon: 'bolt', h: 'Single static binary', p: 'Builds to one static binary with Zig (for example, zig build -Doptimize=ReleaseSafe). No runtime to install, no interpreter to ship — just the binary and a config file.' },
+      { icon: 'open', h: 'Self-hosted & MIT', p: 'Runs entirely on your own infrastructure with no vendor control plane. Docker and Kubernetes deployment guides are provided, and the whole thing is open source under the MIT license.' },
+    ],
+  },
+];
+---
+<BaseLayout
+  title={title}
+  description={description}
+  keywords={keywords}
+  path="features"
+  jsonLd={[breadcrumbSchema(crumbs), softwareAppSchema, orgSchema]}
+>
+  <Breadcrumbs items={crumbs} />
+
+  <section class="hero" style="padding-top:2rem;">
+    <div class="wrap prose" style="max-width:52rem;">
+      <span class="eyebrow">Features</span>
+      <h1>Everything RevenProx does</h1>
+      <div class="answer">
+        <span class="label">Summary</span>
+        <p>
+          <strong>RevenProx delivers Server-Sent Events to 10M+ concurrent clients across a brokerless NNG
+          mesh</strong> — with UUID topic routing for targeted delivery, cached webhook JWT authentication with
+          a circuit breaker, gossip-based state sync (bloom filters, merkle trees, vector clocks), and a
+          low-memory Zig runtime that ships as a single static binary. MIT-licensed and self-hostable.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  {groups.map((g) => (
+    <section style="padding-top:0;">
+      <div class="wrap">
+        <div class="kicker"><span class="eyebrow" style="margin-bottom:0;">{g.label}</span></div>
+        <div class="feature-grid">
+          {g.items.map((f) => (
+            <div class="fcard">
+              <div class="ico"><FeatureIcon name={f.icon} /></div>
+              <h3>{f.h}</h3>
+              <p>{f.p}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  ))}
+
+  <section style="background:var(--bg-soft); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
+    <div class="wrap">
+      <div class="section-head"><span class="eyebrow">Topology</span><h2>How the pieces connect</h2><p>A peer-to-peer mesh with no coordinator, kept consistent by gossip.</p></div>
+      <DiagramMesh />
+      <p style="margin-top:1.8rem;">
+        <a class="btn btn-primary" href={url('architecture')}>Read the architecture</a>
+        <a class="btn btn-ghost" href={REPO} style="margin-left:.6rem;">Source on GitHub →</a>
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head"><span class="eyebrow">Next</span><h2>Keep reading</h2></div>
+      <div class="next-links">
+        <a class="card" href={url('quickstart')}><span class="k">Quickstart</span><h3>Deploy it</h3><p>Build, form the mesh, subscribe a client, scale out.</p></a>
+        <a class="card" href={url('use-cases')}><span class="k">Use cases</span><h3>Where this fits</h3><p>Token streaming, dashboards, notifications, market data.</p></a>
+        <a class="card" href={url('comparison')}><span class="k">Comparison</span><h3>vs. the alternatives</h3><p>Rolling your own vs. managed pub/sub vs. RevenProx.</p></a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

@@ -2,10 +2,10 @@
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 
-// RevenProx project site. Served under the docs domain at /revenprox/.
+// RevenProx project site. Served at its marketing subdomain root.
 export default defineConfig({
-  site: 'https://docs.dotcommoners.com',
-  base: '/revenprox/',
+  site: 'https://revenprox.dotcommoners.com',
+  base: '/',
   trailingSlash: 'ignore',
   build: { format: 'directory' },
   integrations: [sitemap()],

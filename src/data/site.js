@@ -27,4 +27,5 @@ export const NAV = [
   { label: 'dotcommoners', href: WWW },
   { label: 'Docs', href: DOCS },
   { label: 'GitHub', href: REPO },
+  { label: 'Contact', href: `${import.meta.env.BASE_URL.replace(/\/$/, '')}/contact` },
 ];

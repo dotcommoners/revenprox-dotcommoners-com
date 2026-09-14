@@ -52,12 +52,19 @@ export const orgSchema = {
   description: 'Open-source infrastructure for the commons — high-performance, self-hostable systems software.',
 };
 
+// Core Organization @id, as emitted by the www-dotcommoners-com umbrella site.
+// Referenced bare (never re-described) so this spoke rolls up to one identity.
+const CORE_ORG_ID = 'https://www.dotcommoners.com/#organization';
+
 export const websiteSchema = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
+  '@id': `${SITE}/#website`,
   name: 'RevenProx',
-  url: SITE,
-  publisher: { '@type': 'Organization', name: 'dotcommoners', url: WWW },
+  url: `${SITE}/`,
+  inLanguage: 'en',
+  isPartOf: { '@id': CORE_ORG_ID },
+  publisher: { '@id': CORE_ORG_ID },
 };
 
 const softwareDescription =

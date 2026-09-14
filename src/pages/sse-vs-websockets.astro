@@ -1,0 +1,171 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import {
+  REPO, DOCS, WWW, url, SITE,
+  breadcrumbSchema, orgSchema, faqSchema,
+} from '../data/site.js';
+
+const title = 'SSE vs WebSockets — which one, and why RevenProx picks SSE';
+const description =
+  'A protocol-level comparison of Server-Sent Events and WebSockets: framing, reconnection, proxying, and why one-way fan-out favors SSE at RevenProx scale.';
+const keywords = [
+  'SSE vs WebSockets', 'Server-Sent Events protocol', 'WebSockets full duplex', 'EventSource auto-reconnect',
+  'one-way streaming protocol', 'HTTP streaming vs WebSockets', 'when to use SSE',
+];
+
+const crumbs = [
+  { label: 'RevenProx', path: '' },
+  { label: 'SSE vs WebSockets', path: 'sse-vs-websockets' },
+];
+
+const techArticle = {
+  '@context': 'https://schema.org',
+  '@type': 'TechArticle',
+  headline: 'SSE vs WebSockets: a protocol-level comparison',
+  description,
+  about: 'Server-Sent Events compared to WebSockets for real-time streaming',
+  author: { '@type': 'Organization', name: 'dotcommoners', url: WWW },
+  url: `${SITE}/sse-vs-websockets`,
+  mainEntityOfPage: `${SITE}/sse-vs-websockets`,
+};
+
+const rows = [
+  ['Direction', 'One-way: server to client only.', 'Full-duplex: either side sends anytime.'],
+  ['Transport', 'A single long-lived HTTP response (text/event-stream).', 'An HTTP upgrade to a persistent, framed TCP connection.'],
+  ['Client API', 'EventSource — a few lines, built into browsers.', 'WebSocket — a few lines, built into browsers.'],
+  ['Reconnection', 'Automatic, built into EventSource, with a Last-Event-ID replay hook.', 'Manual — the application must detect a close and reconnect itself.'],
+  ['Proxy / CDN friendliness', 'Plain HTTP; most proxies, CDNs, and browsers already handle it correctly.', 'Needs upgrade-aware infrastructure; some older proxies and CDNs mishandle it.'],
+  ['Message framing', 'Newline-delimited text events — simple to read, simple to debug with curl.', 'Binary or text frames defined by the WebSocket protocol.'],
+  ['Best fit', 'Fan-out: dashboards, notifications, token streams, feeds.', 'Interactive, bidirectional: chat input, multiplayer input, live cursors.'],
+];
+
+const faqs = [
+  ['If SSE is one-way, how do clients send anything back?',
+    'Over an ordinary HTTP request — a normal fetch or form POST alongside the open SSE connection. Most fan-out workloads are naturally asymmetric: the server emits far more than the client ever sends back, so a second, ordinary request channel for the occasional client-to-server message is not a limitation in practice.'],
+  ['Does SSE support binary data?',
+    'Not directly — the wire format is UTF-8 text events. Binary payloads are typically base64-encoded or referenced by URL inside the event data, which costs some overhead but keeps the simple, debuggable text framing that makes SSE easy to inspect with a plain curl command.'],
+  ['Can a browser open unlimited SSE connections to one origin?',
+    'Browsers cap concurrent HTTP/1.1 connections per origin (historically six), which can matter if a page opens several EventSource connections to the same host. HTTP/2 removes this ceiling by multiplexing many streams over one connection, which is the more common deployment shape for an SSE-heavy application today.'],
+  ['Why not just use WebSockets for everything, since they can do one-way too?',
+    'They can, but you pay for capability you are not using: upgrade-aware infrastructure, manual reconnect and replay logic, and framing designed for bidirectional traffic. For a workload that is genuinely one-way, SSE gets the same outcome with less protocol and less code on both ends.'],
+];
+---
+<BaseLayout
+  title={title}
+  description={description}
+  keywords={keywords}
+  path="sse-vs-websockets"
+  jsonLd={[techArticle, breadcrumbSchema(crumbs), faqSchema(faqs), orgSchema]}
+>
+  <Breadcrumbs items={crumbs} />
+
+  <section class="hero" style="padding-top:2rem;">
+    <div class="wrap prose" style="max-width:52rem;">
+      <span class="eyebrow">Protocol</span>
+      <h1>SSE vs WebSockets</h1>
+      <div class="answer">
+        <span class="label">In short</span>
+        <p>
+          <strong>Server-Sent Events (SSE) is a one-way, HTTP-native streaming protocol with automatic
+          reconnection; WebSockets are a full-duplex protocol built for two-way, low-latency
+          messaging.</strong> RevenProx is built on SSE because its target workloads — token streams,
+          dashboards, notifications, feeds — are one-way by nature, and SSE gets that outcome with a
+          simpler protocol, a simpler client, and infrastructure that already understands plain HTTP.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:0;">
+    <div class="wrap prose">
+      <h2>How SSE actually works</h2>
+      <p>
+        SSE is not a special transport — it is an ordinary HTTP response that the server never finishes
+        sending. The client opens a request, the server responds with <code>Content-Type:
+        text/event-stream</code> and keeps the connection open, writing newline-delimited <code>data:</code>
+        lines as events occur. Because it rides on HTTP, everything that already understands HTTP — browser
+        connection pooling, most reverse proxies, most CDNs — understands the transport without special
+        casing. The browser's <code>EventSource</code> API wraps this in a few lines of client code and adds
+        one feature most hand-rolled streaming clients get wrong: automatic reconnection, with a
+        <code>Last-Event-ID</code> header the server can use to resume from where the client left off.
+      </p>
+
+      <h2>How WebSockets actually work</h2>
+      <p>
+        A WebSocket connection starts as an HTTP request that asks to be upgraded, then switches to a
+        persistent, framed, full-duplex TCP connection that is no longer HTTP at all. Either side can send a
+        frame at any time, which is exactly what a chat client, a multiplayer game, or a collaborative editor
+        needs — input has to travel both directions with low latency. That power comes with more protocol to
+        implement correctly: framing, ping/pong keepalives, and — unlike EventSource — no built-in
+        reconnect-and-resume, so the application has to detect a dropped socket and rebuild it, including
+        whatever state it needs to catch back up.
+      </p>
+
+      <h2>Side by side</h2>
+      <div class="table-scroll">
+        <table class="cmp">
+          <caption class="sr-only">SSE compared to WebSockets</caption>
+          <thead><tr><th scope="col">Dimension</th><th scope="col">SSE</th><th scope="col">WebSockets</th></tr></thead>
+          <tbody>
+            {rows.map(([dim, sse, ws]) => (
+              <tr><th scope="row">{dim}</th><td class="win">{sse}</td><td>{ws}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Where the choice actually matters</h2>
+      <p>
+        The decision rarely comes down to raw performance — both protocols can move a lot of data quickly.
+        It comes down to <strong>shape</strong>: is the traffic mostly one direction, or genuinely two? A
+        workload that pushes model output, metric updates, notifications, or price ticks to a client that
+        almost never talks back is shaped for SSE. A workload where the client's own input has to reach
+        other participants with low latency — a shared cursor, a keypress in a multiplayer match, a typing
+        indicator — is shaped for WebSockets, because forcing that traffic through a second, ordinary request
+        channel would add latency the interaction can't absorb.
+      </p>
+      <p>
+        RevenProx exists for the first shape. Its brokerless mesh, UUID topic routing, and webhook JWT auth
+        are all designed around fanning a stream of server-originated events out to a very large number of
+        simultaneous clients — the problem SSE is shaped for. It is not a WebSocket gateway, and workloads
+        that are genuinely bidirectional and latency-sensitive should reach for a WebSocket-based tool
+        instead.
+      </p>
+
+      <h2>Limitations of this comparison</h2>
+      <ul>
+        <li>This page describes the protocols generically; it does not benchmark any specific SSE or WebSocket implementation against another.</li>
+        <li>Some environments (older corporate proxies, a small number of legacy CDN configurations) handle one of the two protocols worse than the other — check your own infrastructure rather than assuming either is universally friction-free.</li>
+      </ul>
+
+      <h2>FAQ</h2>
+      <div class="faq">
+        {faqs.map(([q, a]) => (<details><summary>{q}</summary><p>{a}</p></details>))}
+      </div>
+
+      <h2>Bottom line</h2>
+      <p>
+        Choose SSE when the traffic is one-way and you want a simple, HTTP-native protocol with reconnection
+        built in — this is RevenProx's whole domain. Choose WebSockets when participants genuinely need to
+        talk back and forth with low latency. The two are not competitors so much as answers to different
+        questions about which way the data needs to flow.
+      </p>
+      <p style="margin-top:1.6rem;">
+        <a class="btn btn-primary" href={DOCS}>Read the docs</a>
+        <a class="btn btn-ghost" href={REPO} style="margin-left:.6rem;">Source on GitHub →</a>
+      </p>
+    </div>
+  </section>
+
+  <section style="background:var(--bg-soft); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
+    <div class="wrap">
+      <div class="section-head"><span class="eyebrow">Next</span><h2>Keep reading</h2></div>
+      <div class="next-links">
+        <a class="card" href={url('use-cases')}><span class="k">Use cases</span><h3>Where this fits</h3><p>Token streaming, dashboards, notifications, market data.</p></a>
+        <a class="card" href={url('comparison')}><span class="k">Comparison</span><h3>vs. the alternatives</h3><p>RevenProx vs. rolling your own vs. managed pub/sub.</p></a>
+        <a class="card" href={url('faq')}><span class="k">FAQ</span><h3>Common questions</h3><p>Scale, licensing, self-hosting, auth.</p></a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

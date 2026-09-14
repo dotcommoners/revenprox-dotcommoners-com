@@ -158,11 +158,69 @@ const dockerCode = `<span class="c-cm"># 5 — scale out: run more instances (Do
     </div>
   </section>
 
+  <section style="padding-top:0;">
+    <div class="wrap prose" style="max-width:52rem;">
+      <h2>Production considerations</h2>
+      <p>
+        The quickstart above gets one instance streaming; a production deployment adds a few operational
+        layers around it. RevenProx itself listens on a plain TCP address (<code>server.listen</code> in
+        <code>proxy.toml</code>) and does not terminate TLS itself, so in production it typically sits
+        behind a TLS-terminating reverse proxy or load balancer — the same shape you would put in front of
+        any long-lived HTTP service. Because each SSE connection is a normal HTTP response held open, most
+        reverse proxies need their read/response timeout raised (or disabled) for the routes that serve
+        <code>/events/*</code>, or the proxy will close idle-but-open streams on its own schedule rather
+        than RevenProx's.
+      </p>
+      <p>
+        Because routing is by <strong>UUID topic</strong> rather than by connection affinity, there is
+        nothing sticky about a client's choice of instance — any instance in the mesh can accept a new
+        connection for any topic, and the mesh takes care of getting published events to wherever the
+        subscribers ended up. That means a load balancer in front of the mesh can use a plain round-robin
+        or least-connections policy; it does not need session affinity to keep a topic's traffic on one
+        node.
+      </p>
+      <p>
+        Before routing production traffic to a new instance, confirm it has finished forming the mesh —
+        the terminal output during startup reports each peer as it is reached (see the <code>▸ mesh</code>
+        line in the run step above) — and is accepting connections on its configured port. In a Kubernetes
+        deployment this maps naturally onto a readiness check gated on the process being up and its
+        <code>mesh.peers</code> being reachable, separate from a liveness check on the process itself, so a
+        node that has not yet joined the mesh is not sent live subscriber traffic.
+      </p>
+      <h2>Troubleshooting common issues</h2>
+      <ul>
+        <li>
+          <strong>An instance won't peer.</strong> Check that <code>mesh.peers</code> lists the correct
+          host:port for every other instance and that the <code>gossip_ms</code> interval traffic can
+          actually reach them — a firewall or network policy blocking the NNG mesh port is the usual cause
+          of an instance that starts but never converges with the rest of the fleet.
+        </li>
+        <li>
+          <strong>Clients are rejected at connect time.</strong> Authentication is verified against
+          <code>auth.webhook</code>; if that endpoint is unreachable or slow, the circuit breaker
+          (<code>auth.breaker</code>) trips and stops sending it requests, which will surface as connection
+          rejections until the upstream recovers and the breaker closes again.
+        </li>
+        <li>
+          <strong>Reconnect storms hit the auth service.</strong> Raise <code>auth.cache_ttl_s</code> so a
+          burst of clients reconnecting with the same, still-valid JWT does not re-verify on every
+          reconnect — the cache is what keeps that burst from becoming a burst of webhook calls.
+        </li>
+        <li>
+          <strong>An instance hits its connection ceiling.</strong> <code>server.max_conns</code> is a
+          per-instance cap; if you are approaching it, the fix is horizontal — add another instance to the
+          mesh — rather than raising the cap on a single node past what its memory budget supports.
+        </li>
+      </ul>
+    </div>
+  </section>
+
   <section>
     <div class="wrap">
       <div class="section-head"><span class="eyebrow">Next</span><h2>Keep reading</h2></div>
       <div class="next-links">
         <a class="card" href={url('architecture')}><span class="k">Architecture</span><h3>How it works</h3><p>The NNG mesh, state sync, JWT auth, and memory model.</p></a>
+        <a class="card" href={url('configuration')}><span class="k">Configuration</span><h3>Every config field</h3><p>What each <code>proxy.toml</code> key does and when to change it.</p></a>
         <a class="card" href={url('features')}><span class="k">Features</span><h3>The full list</h3><p>Scale, routing, security, and runtime capabilities.</p></a>
         <a class="card" href={url('faq')}><span class="k">FAQ</span><h3>Common questions</h3><p>Scale, licensing, SSE vs WebSockets, self-hosting, auth.</p></a>
       </div>

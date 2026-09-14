@@ -102,7 +102,7 @@ const cases = [
       </ul>
       <p>
         If instead you need full-duplex, low-latency, bidirectional messaging (e.g. a game netcode loop),
-        WebSockets are the better primitive — see the <a href={url('faq')}>FAQ on SSE vs WebSockets</a>.
+        WebSockets are the better primitive — see the full <a href={url('sse-vs-websockets')}>SSE vs WebSockets comparison</a>.
       </p>
       <p style="margin-top:1.6rem;">
         <a class="btn btn-primary" href={DOCS}>Read the docs</a>
@@ -116,8 +116,8 @@ const cases = [
       <div class="section-head"><span class="eyebrow">Next</span><h2>Keep reading</h2></div>
       <div class="next-links">
         <a class="card" href={url('architecture')}><span class="k">Architecture</span><h3>How it works</h3><p>The NNG mesh, state sync, JWT auth, and memory model.</p></a>
+        <a class="card" href={url('sse-vs-websockets')}><span class="k">SSE vs WebSockets</span><h3>Why one-way</h3><p>Protocol-level comparison and when to pick which.</p></a>
         <a class="card" href={url('comparison')}><span class="k">Comparison</span><h3>vs. the alternatives</h3><p>Rolling your own vs. managed pub/sub vs. RevenProx.</p></a>
-        <a class="card" href={url('faq')}><span class="k">FAQ</span><h3>Common questions</h3><p>Scale, licensing, SSE vs WebSockets, self-hosting.</p></a>
       </div>
     </div>
   </section>

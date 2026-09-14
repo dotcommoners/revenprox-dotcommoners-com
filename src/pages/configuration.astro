@@ -1,0 +1,184 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import FeatureIcon from '../components/FeatureIcon.astro';
+import {
+  REPO, DOCS, WWW, url, SITE,
+  breadcrumbSchema, orgSchema, faqSchema,
+} from '../data/site.js';
+
+const title = 'RevenProx Configuration — proxy.toml reference';
+const description =
+  'Every RevenProx proxy.toml field explained: server limits, NNG mesh peers and gossip interval, and webhook JWT auth with caching and a circuit breaker.';
+const keywords = [
+  'proxy.toml reference', 'RevenProx configuration', 'NNG mesh peers config', 'gossip interval SSE proxy',
+  'webhook JWT config', 'circuit breaker config', 'max_conns SSE proxy',
+];
+
+const crumbs = [
+  { label: 'RevenProx', path: '' },
+  { label: 'Configuration', path: 'configuration' },
+];
+
+const techArticle = {
+  '@context': 'https://schema.org',
+  '@type': 'TechArticle',
+  headline: 'RevenProx proxy.toml configuration reference',
+  description,
+  about: 'RevenProx SSE proxy configuration file fields',
+  author: { '@type': 'Organization', name: 'dotcommoners', url: WWW },
+  url: `${SITE}/configuration`,
+  mainEntityOfPage: `${SITE}/configuration`,
+};
+
+const fields = [
+  ['server.listen', '"0.0.0.0:8080"', 'The address and port this instance binds to for incoming SSE connections. Every instance in a mesh can use the same port on different hosts, or different ports on the same host.'],
+  ['server.max_conns', '2_000_000', 'A per-instance ceiling on concurrent connections. It exists to protect one node from being driven past what its memory budget supports — capacity beyond this is added by joining another instance to the mesh, not by raising the number.'],
+  ['mesh.peers', '["rp-2:7000", "rp-3:7000"]', 'The other instances this node peers with directly over NNG. Every instance needs a path to every other instance, so the list should reflect the full mesh topology for that node, not just its immediate neighbors.'],
+  ['mesh.gossip_ms', '250', 'How often, in milliseconds, an instance exchanges its bloom-filter and merkle-tree state summaries with its peers. A lower interval converges topic membership faster after a change, at the cost of more frequent gossip traffic.'],
+  ['auth.webhook', '"https://auth.example.com/verify"', 'The URL RevenProx calls to verify a client-presented JWT. This is your own auth service — RevenProx never stores or issues identity, it only asks this endpoint whether a token is valid.'],
+  ['auth.cache_ttl_s', '300', 'How long, in seconds, a verification result is cached. Raising this absorbs reconnect bursts from clients presenting the same still-valid token; lowering it shortens how long a revoked token can keep working against the cache.'],
+  ['auth.breaker', 'true', 'Whether the circuit breaker is enabled for the auth webhook. When the upstream starts failing or slowing down, the breaker trips and stops sending it requests, so a struggling auth service is protected rather than hammered by every reconnect.'],
+];
+
+const fullExample = `<span class="c-cm"># proxy.toml — a complete single-instance config</span>
+<span class="c-punc">[</span><span class="c-key">server</span><span class="c-punc">]</span>
+<span class="c-var">listen</span>        <span class="c-punc">=</span> <span class="c-str">"0.0.0.0:8080"</span>
+<span class="c-var">max_conns</span>     <span class="c-punc">=</span> <span class="c-num">2_000_000</span>
+
+<span class="c-punc">[</span><span class="c-key">mesh</span><span class="c-punc">]</span>
+<span class="c-var">peers</span>         <span class="c-punc">=</span> <span class="c-punc">[</span><span class="c-str">"rp-2:7000"</span><span class="c-punc">,</span> <span class="c-str">"rp-3:7000"</span><span class="c-punc">]</span>
+<span class="c-var">gossip_ms</span>     <span class="c-punc">=</span> <span class="c-num">250</span>
+
+<span class="c-punc">[</span><span class="c-key">auth</span><span class="c-punc">]</span>
+<span class="c-var">webhook</span>       <span class="c-punc">=</span> <span class="c-str">"https://auth.example.com/verify"</span>
+<span class="c-var">cache_ttl_s</span>   <span class="c-punc">=</span> <span class="c-num">300</span>
+<span class="c-var">breaker</span>       <span class="c-punc">=</span> <span class="c-key">true</span>`;
+
+const faqs = [
+  ['Do all instances in a mesh share one config file?',
+    'No. Each instance has its own proxy.toml, and mesh.peers on each one lists the others — there is no shared or central config to keep in sync beyond making sure every instance knows how to reach every other instance.'],
+  ['What happens if I raise server.max_conns past what the host can hold?',
+    'The instance will accept connections up to whatever its actual memory allows and then fail to accept more; max_conns is a ceiling you set, not a guarantee the host can reach it. Size it to the instance’s real memory budget and add instances for more total capacity.'],
+  ['Can I point auth.webhook at a different endpoint per environment?',
+    'Yes — it is an ordinary URL in the config, so a staging fleet and a production fleet simply carry different values, each pointing at that environment’s own auth service.'],
+  ['Is there a config field for TLS?',
+    'No. RevenProx listens on a plain TCP address and does not terminate TLS itself; put a TLS-terminating reverse proxy or load balancer in front of it, as described on the quickstart page.'],
+];
+---
+<BaseLayout
+  title={title}
+  description={description}
+  keywords={keywords}
+  path="configuration"
+  jsonLd={[techArticle, breadcrumbSchema(crumbs), faqSchema(faqs), orgSchema]}
+>
+  <Breadcrumbs items={crumbs} />
+
+  <section class="hero" style="padding-top:2rem;">
+    <div class="wrap prose" style="max-width:52rem;">
+      <span class="eyebrow">Configuration</span>
+      <h1>The proxy.toml reference</h1>
+      <div class="answer">
+        <span class="label">In short</span>
+        <p>
+          <strong>Every RevenProx instance reads one <code>proxy.toml</code> with three tables: <code>[server]</code>,
+          <code>[mesh]</code>, and <code>[auth]</code>.</strong> They control, respectively, how the instance
+          accepts connections, how it finds and gossips with its mesh peers, and how it verifies client JWTs
+          against your auth service. There is no global or shared config — each instance carries its own file,
+          and the fields below are every one of them.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:0;">
+    <div class="wrap prose">
+      <h2>Why three tables, not one flat file</h2>
+      <p>
+        The split mirrors the three things an instance has to decide independently: what it exposes to
+        clients (<code>[server]</code>), who it talks to as a peer (<code>[mesh]</code>), and how it decides
+        whether to trust a given connection (<code>[auth]</code>). None of the three tables depend on the
+        others being configured a particular way — you can change <code>auth.cache_ttl_s</code> without
+        touching mesh topology, or add a peer without touching auth — which keeps a config change scoped to
+        the one behavior it is meant to affect.
+      </p>
+
+      <h2>Field reference</h2>
+      <div class="table-scroll">
+        <table class="cmp">
+          <caption class="sr-only">RevenProx proxy.toml configuration fields</caption>
+          <thead>
+            <tr><th scope="col">Field</th><th scope="col">Example</th><th scope="col">What it controls</th></tr>
+          </thead>
+          <tbody>
+            {fields.map(([f, ex, desc]) => (
+              <tr><th scope="row"><code>{f}</code></th><td><code>{ex}</code></td><td>{desc}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h2>A complete example</h2>
+      <p>
+        This is a full, valid config for one instance in a three-node mesh — it is the same example used on
+        the quickstart page, shown here with every field in context:
+      </p>
+      <div class="terminal"><div class="bar"><span class="dot3 r"></span><span class="dot3 y"></span><span class="dot3 g"></span><span class="name">config/proxy.toml</span></div><pre><code set:html={fullExample} /></pre></div>
+
+      <h2>Choosing values: what to tune and why</h2>
+      <p>
+        <strong><code>max_conns</code></strong> should reflect the memory you have actually budgeted for
+        this instance, not an aspirational number — RevenProx's low, predictable per-connection footprint in
+        Zig is what makes a given value plannable, but the ceiling is still yours to set correctly for the
+        host it runs on.
+      </p>
+      <p>
+        <strong><code>gossip_ms</code></strong> trades convergence speed against gossip traffic. A busy mesh
+        with topics changing membership often benefits from a shorter interval; a stable, slow-changing set
+        of topics can gossip less often without subscribers noticing any difference in delivery.
+      </p>
+      <p>
+        <strong><code>cache_ttl_s</code></strong> is the main lever for surviving reconnect storms. Set it
+        too low and a burst of reconnecting clients re-verifies against your auth service on every
+        reconnect; set it too high and a revoked token stays effective against the cache for longer than you
+        may want. Pick a value against how long you are willing to honor a token after it is revoked
+        upstream.
+      </p>
+
+      <h2>Limitations</h2>
+      <ul>
+        <li>Config is per-instance and local to that instance's file — there is no central config service or hot-reload described here; changing a field means updating that instance's file and restarting it.</li>
+        <li>There is no field for TLS termination, rate limiting, or request logging — those live in front of RevenProx (a reverse proxy or load balancer) or in your own observability stack, not in <code>proxy.toml</code>.</li>
+      </ul>
+
+      <h2>FAQ</h2>
+      <div class="faq">
+        {faqs.map(([q, a]) => (<details><summary>{q}</summary><p>{a}</p></details>))}
+      </div>
+
+      <h2>Bottom line</h2>
+      <p>
+        Three small tables cover everything one RevenProx instance needs to know about itself, its mesh, and
+        its auth upstream. There is no config surface beyond <code>proxy.toml</code> — get these seven fields
+        right per instance and the mesh, routing, and auth behavior documented on the
+        <a href={url('architecture')}>architecture page</a> follow from them.
+      </p>
+      <p style="margin-top:1.6rem;">
+        <a class="btn btn-primary" href={DOCS}>Full documentation</a>
+        <a class="btn btn-ghost" href={REPO} style="margin-left:.6rem;">Source on GitHub →</a>
+      </p>
+    </div>
+  </section>
+
+  <section style="background:var(--bg-soft); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
+    <div class="wrap">
+      <div class="section-head"><span class="eyebrow">Next</span><h2>Keep reading</h2></div>
+      <div class="next-links">
+        <a class="card" href={url('quickstart')}><span class="k">Quickstart</span><h3>Deploy it</h3><p>Build, form the mesh, subscribe a client, and scale out.</p></a>
+        <a class="card" href={url('architecture')}><span class="k">Architecture</span><h3>How it works</h3><p>The NNG mesh, state sync, JWT auth, and memory model.</p></a>
+        <a class="card" href={url('faq')}><span class="k">FAQ</span><h3>Common questions</h3><p>Scale, licensing, SSE vs WebSockets, self-hosting.</p></a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

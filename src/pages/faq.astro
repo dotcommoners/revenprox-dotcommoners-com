@@ -29,7 +29,7 @@ const faqs = [
   ['What is a brokerless NNG mesh?',
     'It means the proxy instances talk to each other directly over NNG (nanomsg-next-gen) to form a peer-to-peer mesh, with no central message broker in the middle. State — which topics exist and where subscribers live — is kept consistent across the mesh using bloom filters, merkle trees, and vector clocks. Removing the broker removes the usual pub/sub scaling ceiling: any instance can accept a publish and route it to subscribers anywhere, so you add capacity by adding nodes.'],
   ['SSE vs WebSockets — why SSE?',
-    'Server-Sent Events is a simple, HTTP-native, one-way (server-to-client) streaming protocol: a long-lived HTTP response that emits events over time, with built-in auto-reconnect. That is a perfect fit for fan-out workloads like token streams, dashboards, notifications, and feeds, where clients mostly receive. WebSockets are full-duplex and better when you need low-latency bidirectional messaging. RevenProx is purpose-built for the one-way, massive-fan-out SSE case; clients that need to send data back do so over ordinary HTTP requests.'],
+    'Server-Sent Events is a simple, HTTP-native, one-way (server-to-client) streaming protocol: a long-lived HTTP response that emits events over time, with built-in auto-reconnect. That is a perfect fit for fan-out workloads like token streams, dashboards, notifications, and feeds, where clients mostly receive. WebSockets are full-duplex and better when you need low-latency bidirectional messaging. RevenProx is purpose-built for the one-way, massive-fan-out SSE case; clients that need to send data back do so over ordinary HTTP requests. See the full protocol comparison for the details.'],
   ['How do I self-host and deploy RevenProx?',
     'RevenProx builds to a single static binary with Zig (for example, zig build -Doptimize=ReleaseSafe) and runs on your own infrastructure. You run instances, they form the NNG mesh, and you scale by running more of them. Docker and Kubernetes deployment guides are provided in the documentation at docs.dotcommoners.com/revenprox.'],
   ['How does authentication work?',
@@ -81,7 +81,8 @@ const faqs = [
       </div>
       <p style="max-width:52rem; margin-top:1.6rem;">
         Still have a question? <a href={url('contact')}>Contact us</a>, read the
-        <a href={DOCS}> documentation</a>, or browse the <a href={REPO}>source on GitHub</a>.
+        <a href={DOCS}> documentation</a>, or browse the <a href={REPO}>source on GitHub</a>. For the full
+        SSE vs. WebSockets protocol comparison, see the <a href={url('sse-vs-websockets')}>dedicated page</a>.
       </p>
     </div>
   </section>
@@ -115,8 +116,8 @@ const faqs = [
       <div class="section-head"><span class="eyebrow">Next</span><h2>Keep reading</h2></div>
       <div class="next-links">
         <a class="card" href={url('quickstart')}><span class="k">Quickstart</span><h3>Deploy it</h3><p>Build, form the mesh, subscribe a client, and scale out.</p></a>
+        <a class="card" href={url('configuration')}><span class="k">Configuration</span><h3>proxy.toml reference</h3><p>Every field: server limits, mesh peers, auth webhook.</p></a>
         <a class="card" href={url('architecture')}><span class="k">Architecture</span><h3>How it works</h3><p>The NNG mesh, state sync, JWT auth, and memory model.</p></a>
-        <a class="card" href={url('features')}><span class="k">Features</span><h3>The full list</h3><p>Scale, routing, security, and runtime capabilities.</p></a>
       </div>
     </div>
   </section>

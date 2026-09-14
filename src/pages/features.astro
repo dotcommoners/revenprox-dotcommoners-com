@@ -78,6 +78,14 @@ const groups = [
           low-memory Zig runtime that ships as a single static binary. MIT-licensed and self-hostable.
         </p>
       </div>
+      <p>
+        The four groups below are not independent add-ons — they are the answer to one question asked four
+        ways: how do you hold a very large number of mostly-idle connections open, route each event to
+        exactly the clients that asked for it, and keep the whole thing running without a person watching a
+        dashboard. Scale and topology decide how capacity grows; state and routing decide who receives what;
+        security and resilience decide what happens when an upstream degrades; runtime and operations decide
+        what it costs, per connection, to hold the line open at all.
+      </p>
     </div>
   </section>
 
@@ -97,6 +105,31 @@ const groups = [
       </div>
     </section>
   ))}
+
+  <section style="padding-top:0;">
+    <div class="wrap prose" style="max-width:52rem;">
+      <h2>Three design principles behind the list</h2>
+      <p>
+        <strong>No coordinator, ever.</strong> Every feature above is built to work without a node whose
+        job is to know everything — the mesh, the topic routing, and the state-sync primitives are all
+        peer-to-peer by construction. A feature that needed a central registry to function would reintroduce
+        the exact bottleneck the brokerless design exists to remove, so none of them do.
+      </p>
+      <p>
+        <strong>Predictable cost beats peak throughput.</strong> RevenProx is not optimized to win a
+        requests-per-second benchmark; it is optimized for the case where the number that matters is how
+        much memory a million idle-but-open connections cost you, and whether that number is one you can
+        plan a fleet around. That is why Zig, manual memory layout, and no garbage collector show up as a
+        feature rather than an implementation detail.
+      </p>
+      <p>
+        <strong>Your auth stays yours.</strong> The webhook JWT model exists so RevenProx never becomes the
+        system of record for who a user is — it verifies against your existing auth service and caches the
+        answer, so your identity logic is written and owned in exactly one place, not duplicated into the
+        streaming layer.
+      </p>
+    </div>
+  </section>
 
   <section style="background:var(--bg-soft); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
     <div class="wrap">
